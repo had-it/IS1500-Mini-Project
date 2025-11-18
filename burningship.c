@@ -23,17 +23,14 @@ int main(void) {
             /* map pixel to complex plane: x in [-2,1], y in [-1.5,1.5] */
             double cx = -2.0 + (3.0 * px) / (W - 1);
             double cy =  1.5 - (3.0 * py) / (H - 1);
-            //double zr = creal(z);
-            //double zi = cimag(z);
+            double zr = creal(z);
+            double zi = cimag(z);
             double complex c = cx + cy * I;
             double complex z = 0;
             int i = 0;
             
             
             while (i < MAXI && cabs(z) <= 2.0) { 
-
-            double zr = creal(z);
-            double zi = cimag(z);
                 z = (fabs(zr) - fabs(zi)*I) * (fabs(zr) - fabs(zi)*I) + c;
                 ++i;
             }
