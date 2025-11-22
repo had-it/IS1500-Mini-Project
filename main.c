@@ -11,6 +11,8 @@ to this area means writing to the screen)
 fetches data from framebuffer and sends it to the screen)
 */
 
+extern void delay(int);
+
 // code from lectureslides Canvas xx
 int main(){
     // Create a pointer to the VGA pixel buffer. This is the “drawing” area
@@ -41,7 +43,7 @@ int main(){
 }
 
 
-// Switches and buttons
+// -- Switches and buttons --
 
 // Buttons
 int get_btn(void) {
@@ -116,16 +118,34 @@ main(){
     while(1){
 
         // Switch: color palette
+        if (get_sw() == 0x100) {
+
+        }
             // time interrupt
 
         // Switch: change fractal
+        if (get_sw() == 0x200) {
+
+        }
             // time interrupt
 
         // Switch: Zoom out
+        if (get_sw() == 0x300) {
+
+        }
+
  
         // Switch: Navigation Y and X axis
+        if (get_sw() == 0x400) {
+
+        }
 
         // Button: Infinite Zoom in (while pressed once - zooming in, while pressed again - zomming stops)
+        if (get_btn()) {
+
+        }
+
+        // delay??
 
 
     }
