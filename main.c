@@ -48,7 +48,7 @@ int main(){
 
 // 
 
-int fractal_option = 0; // 0 = Mandelbrot, 1 = Burning Ship
+int fractal_type = 0; // 0 = Mandelbrot, 1 = Burning Ship
 
 /* ------ MAIN ------- */
 
@@ -59,20 +59,28 @@ main(){
     // CLEAR DISPLAY
 
     // DISPLAY FRACTAL
-    fractals(fractal_option); // Mandelbrot
+    fractals(fractal_type); // Mandelbrot
 
     while(1){
-        // Switch: color palette
+        labinit(); // infinite zoom with timeinterrupts
 
-        // Switch: change fractal 
+        bool time_interrup = false;
+
+        // Switch: color palette
+            // time interrupt
+
+        // Switch: change fractal
+            // time interrupt
 
         // Switch: Zoom out
-
+ 
         // Switch: Navigation Y and X axis
 
         // Button: Infinite Zoom in (while pressed once - zooming in, while pressed again - zomming stops)
 
+
     }
+    return 0;
 
 
 }
