@@ -1,7 +1,7 @@
 // Compile: gcc mandelbrotset.c -o mandelbrotset $(pkg-config --cflags --libs sdl2) -lm
 // Run: ./mandelbrotset
 
-#include <SDL2/SDL.h>   // Library for graphics
+//#include <SDL2/SDL.h>   // Library for graphics
 #include <complex.h>    // Library for complex numbers
 #include <math.h>       // Library for mathematical functions
 
@@ -13,9 +13,9 @@
 #define MAXI 500
 
 int main(void) {
-    if (SDL_Init(SDL_INIT_VIDEO)) return 1;
-    SDL_Window *win = SDL_CreateWindow("Mandelbrot (simple)", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, W, H, 0);
-    SDL_Renderer *ren = SDL_CreateRenderer(win, -1, 0);
+    //if (SDL_Init(SDL_INIT_VIDEO)) return 1;
+    //SDL_Window *win = SDL_CreateWindow("Mandelbrot (simple)", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, W, H, 0);
+    //SDL_Renderer *ren = SDL_CreateRenderer(win, -1, 0);
 
     for (int py = 0; py < H; ++py) {
         for (int px = 0; px < W; ++px) {
@@ -64,25 +64,25 @@ int main(void) {
             }
 
             
-            SDL_RenderDrawPoint(ren, px, py);
+            //SDL_RenderDrawPoint(ren, px, py);
         }
     }
 
-    SDL_RenderPresent(ren);
+    //SDL_RenderPresent(ren);
 
     /* wait until window closed or ESC pressed */
-    int running = 1;
-    SDL_Event e;
-    while (running) {
-        while (SDL_PollEvent(&e)) {
-            if (e.type == SDL_QUIT) running = 0;
-            if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE) running = 0;
-        }
-        SDL_Delay(10);
-    }
+    //int running = 1;
+    //SDL_Event e;
+    //while (running) {
+        //while (SDL_PollEvent(&e)) {
+            //if (e.type == SDL_QUIT) running = 0;
+            //if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE) running = 0;
+        //}
+        //SDL_Delay(10);
+    //}
 
-    SDL_DestroyRenderer(ren);
-    SDL_DestroyWindow(win);
-    SDL_Quit();
+    //DL_DestroyRenderer(ren);
+    //SDL_DestroyWindow(win);
+    //SDL_Quit();
     return 0;
 }
