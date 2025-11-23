@@ -7,6 +7,14 @@ Authors:
 
 extern void delay(int);
 
+
+// Dimensions of the screen size
+#define W 320
+#define H 240
+
+// Maximum number of iterations for pixels (the higher, the slower, but better quality)
+#define MAXI 50
+
 // ------- Switches and buttons ---------
 
 // Buttons
@@ -21,12 +29,16 @@ int get_sw( void ){
   return (*switches) & 0x3FF; // Checks the status of the switches in the 10 lsbs
 }
 
+// Fractaltypes and color palette
 
 int fractal_type = 0; // 0 = Mandelbrot, 1 = Burning Ship
+int color_palette = 0; // 0 = xx, 1 = xx
 
 
 // ------- Labinit and timeinterrupt ---------
 // Code from Lab3
+
+volatile unsigned short* T_Ctrl = (unsigned short*) 0x04000024;
 
 /* Below is the function that will be called when an interrupt is triggered. */
 void handle_interrupt(unsigned cause) 
@@ -91,6 +103,8 @@ main(){
     fractals(fractal_type); // Mandelbrot
 
     while(1){
+
+        // VGA - from lectureslides in Canvas
 
         // Update the backbuffer to point to the VGA pixel buffer + 320*y_ofs
         *(VGA_CTRL+1) = (unsigned int) (VGA+y_ofs*320);
