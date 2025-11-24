@@ -49,9 +49,11 @@ static void draw_fractal_to_fb(int fractal_type, uint16_t palette[256]) {
             float cx = center_x + ((float)px - halfw) * pixel;
             float cy = center_y + ((float)py - halfh) * pixel;
 
-            int iter = (fractal_type == 0)
-                       ? mandelbrot(cx, cy, MAX_ITER)
-                       : burningship(cx, cy, MAX_ITER);
+            if (fractal_type == 0) {
+                int iter = mandelbrot(cx, cy, MAX_ITER);
+            } else {
+                int iter = burningship(cx, cy, MAX_ITER);
+            }
 
             fb[py * W + px] = iter_to_color(iter, MAX_ITER, palette);
         }
