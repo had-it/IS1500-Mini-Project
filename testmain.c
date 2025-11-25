@@ -12,18 +12,18 @@ extern uint16_t iter_to_color(int iter, int max_iter, uint16_t pal[256]);
 #define MAX_ITER 80   // keep same value used when building palette / testing
 
 // MMIO (DTEK-V memory map / addresses)
-#define VGA_FRAMEBUF  ((volatile uint16_t *)0x08000000)
-#define SWITCH   ((volatile uint32_t *)0x04000010)
-#define BUTTON   ((volatile uint32_t *)0x040000D0)
+#define VGA_FRAMEBUF  ((volatile uint16_t *)0x08000000UL)   // UL stands for unsigned long (not strictly necessary)
+#define SWITCH   ((volatile uint32_t *)0x04000010UL)
+#define BUTTON   ((volatile uint32_t *)0x040000D0UL)
 
 /* selected ports bits */
-#define SWITCH_BIT_MASK  (1u << 0)
+#define SWITCH_BIT_MASK  (1u << 0) // 1u means 1 unsigned. (iu << 0) is basically just 1
 #define BUTTON_DRAW_MASK (1u << 0)
 
 // Calling assembly pause function for delay
 extern void asm_pause(unsigned int loops);
 
-/* simple accessors like your lab main style */
+// Getting switch and button
 static int get_sw(void) {
     return (int)(*SWITCH);
 }
@@ -36,8 +36,8 @@ static void draw_fractal_to_fb(int fractal_type, uint16_t palette[256]) {
     volatile uint16_t *fb = VGA_FRAMEBUF;
 
     // Clear the entire VGA buffer area by writing the value 0 (=black)
-    for (int i = 0; i < 320*480; i++) {
-        fb[i] = 0;
+    for (int i = 0; i < W*H; ++i) {
+        fb[i] = 0x0000;
     }
 
     /* view parameters (static basic view) */
@@ -60,6 +60,9 @@ static void draw_fractal_to_fb(int fractal_type, uint16_t palette[256]) {
                 int iter = burningship(cx, cy, MAX_ITER);
             }
 
+            /* py: y-axis (row), px: x-axis (colum), W: width
+               py * W + px = row * width + column (converts 2D (x,y) into 1D)
+               Basically we are calculation the position of a pixel in the framebuffer */
             fb[py * W + px] = iter_to_color(iter, MAX_ITER, palette); // Drawing with vga
         }
     }
