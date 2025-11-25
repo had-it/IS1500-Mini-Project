@@ -1,6 +1,6 @@
 // NOTE: Change float to fixed because float is slow on embedded systems
 
-#include <stdint.h> // for uint16_t, uint8_t
+#include <stdint.h> // for uint16_t, uint8_t, and float?
 
 #define MAX_ITER 80 // Maximum iterations for fractal calculations
 
@@ -66,16 +66,17 @@ static inline uint16_t rgb565(uint8_t r, uint8_t g, uint8_t b) {
 void build_palette(uint16_t pal[256]) {
     int i;
     for (i = 0; i < 256; i++) {
-        uint8_t v = (uint8_t)i;
+        uint8_t v = (uint8_t)i; // Converting i to uint8_t and assigning to v. (uint8_t = "unsigned 8-bit integer" , has range 0-255)
         pal[i] = rgb565(v/2, v, 255);
     }
 }
 
 // Map iteration count to color
 uint16_t iter_to_color(int iter, int max_iter, uint16_t pal[256]) {
-    if (iter >= max_iter)
+    if (iter >= max_iter) {
         return 0x0000; // inside = black
-
-    int idx = (iter * 255) / (max_iter - 1);
-    return pal[idx];
+    }
+    
+    int idx = (iter * 255) / (max_iter - 1); // we compute an index between 0 and 255
+    return pal[idx];   // return color from palette based on index
 }
