@@ -9,7 +9,7 @@ extern uint16_t iter_to_color(int iter, int max_iter, uint16_t pal[256]);
 // Dimensions of the screen size
 #define W 320
 #define H 240
-#define MAX_ITER 80   // keep same value used when building palette / testing
+#define MAX_ITER 50   // keep same value used when building palette / testing
 
 // MMIO (DTEK-V memory map / addresses)
 #define VGA_FRAMEBUF  ((volatile uint16_t *)0x08000000UL)   // UL stands for unsigned long (not strictly necessary)
