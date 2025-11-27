@@ -54,13 +54,11 @@ static void draw_fractal_to_fb(int fractal_type, uint16_t palette[256]) {
             float cx = center_x + ((float)px - halfw) * pixel;
             float cy = center_y + ((float)py - halfh) * pixel;
 
+            int iter;
             if (fractal_type == 0) {
-                int iter = mandelbrot(cx, cy, MAX_ITER);
-                fb[py * W + px] = iter_to_color(iter, MAX_ITER, palette);// Drawing with vga
+                iter = mandelbrot(cx, cy, MAX_ITER);
             } else {
-                int iter = burningship(cx, cy, MAX_ITER);
-                fb[py * W + px] = iter_to_color(iter, MAX_ITER, palette);// Drawing with vga
-            }
+                iter = burningship(cx, cy, MAX_ITER);
 
             /* py: y-axis (row), px: x-axis (colum), W: width
                py * W + px = row * width + column (converts 2D (x,y) into 1D)
@@ -76,24 +74,21 @@ int main(void) {
     build_palette(palette);
 
     int last_btn = 0;
+    int fractal_type = 0; // Initialize fractal type to Mandelbrot (changed later based on switch)
 
     while (1) {
         int sw  = get_sw();
         int btn = get_btn();
 
         if (sw & SWITCH_BIT_MASK) {
-            int fractal_type = 1; // Burning Ship
-            if ((btn & BUTTON_DRAW_MASK) && !(last_btn & BUTTON_DRAW_MASK)) {
-            draw_fractal_to_fb(fractal_type, palette);
-        }
+            fractal_type = 1; // Burning Ship
         } else {
-            int fractal_type = 0; // Mandelbrot
-            if ((btn & BUTTON_DRAW_MASK) && !(last_btn & BUTTON_DRAW_MASK)) {
+            fractal_type = 0; // Mandelbrot
+        }
+        
+        if ((btn & BUTTON_DRAW_MASK) && !(last_btn & BUTTON_DRAW_MASK)) {
             draw_fractal_to_fb(fractal_type, palette);
         }
-        }
-
-        /* on rising edge of draw button, render fractal */
         
 
         last_btn = btn;
