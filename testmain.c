@@ -56,14 +56,16 @@ static void draw_fractal_to_fb(int fractal_type, uint16_t palette[256]) {
 
             if (fractal_type == 0) {
                 int iter = mandelbrot(cx, cy, MAX_ITER);
+                fb[py * W + px] = iter_to_color(iter, MAX_ITER, palette);// Drawing with vga
             } else {
                 int iter = burningship(cx, cy, MAX_ITER);
+                fb[py * W + px] = iter_to_color(iter, MAX_ITER, palette);// Drawing with vga
             }
 
             /* py: y-axis (row), px: x-axis (colum), W: width
                py * W + px = row * width + column (converts 2D (x,y) into 1D)
                Basically we are calculation the position of a pixel in the framebuffer */
-            fb[py * W + px] = iter_to_color(iter, MAX_ITER, palette); // Drawing with vga
+
         }
     }
 }
@@ -81,14 +83,18 @@ int main(void) {
 
         if (sw & SWITCH_BIT_MASK) {
             int fractal_type = 1; // Burning Ship
+            if ((btn & BUTTON_DRAW_MASK) && !(last_btn & BUTTON_DRAW_MASK)) {
+            draw_fractal_to_fb(fractal_type, palette);
+        }
         } else {
             int fractal_type = 0; // Mandelbrot
+            if ((btn & BUTTON_DRAW_MASK) && !(last_btn & BUTTON_DRAW_MASK)) {
+            draw_fractal_to_fb(fractal_type, palette);
+        }
         }
 
         /* on rising edge of draw button, render fractal */
-        if ((btn & BUTTON_DRAW_MASK) && !(last_btn & BUTTON_DRAW_MASK)) {
-            draw_fractal_to_fb(fractal_type, palette);
-        }
+        
 
         last_btn = btn;
 

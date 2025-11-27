@@ -76,8 +76,7 @@ void labinit(void)
 
 /* ------ MAIN ------- */
 
-main(){
-    labinit();
+int main(void){
 
     // Set up VGA - taken from canvas lectureslides 5
 
@@ -90,8 +89,6 @@ main(){
     // Fill the drawing area with some values
     for (int i = 0; i < 320*480; i++){
         VGA[i] = i / 320;
-
-        // OUR FRACTAL FORMULA SHOULD BE HERE
     }
 
     unsigned int y_ofs= 0;
