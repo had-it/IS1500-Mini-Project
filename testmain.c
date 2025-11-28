@@ -67,14 +67,13 @@ static void draw_fractal_to_fb(int fractal_type, uint8_t palette[256]) {
     float halfw = (float)W / 2.0f;
     float halfh = (float)H / 2.0f;
     float pixel = scale / (float)W;
-    float aspect = (float)H / (float)W;
 
     
 
     for (int py = 0; py < H; ++py) {
         for (int px = 0; px < W; ++px) {
             float cx = center_x + ((float)px - halfw) * pixel;
-            float cy = center_y + ((float)py - halfh) * pixel * aspect;
+            float cy = center_y + ((float)py - halfh) * pixel;
             
 
             int iter;
