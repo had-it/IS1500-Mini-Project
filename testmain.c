@@ -1,8 +1,8 @@
 #include <stdint.h>
 
 // Functions from fractals.c 
-extern int mandelbrot(float c_re, float c_im, int max_iter);
-extern int burningship(float c_re, float c_im, int max_iter);
+extern int mandelbrot(int32_t c_re, int32_t c_im, int max_iter);
+extern int burningship(int32_t c_re, int32_t c_im, int max_iter);
 extern void build_palette(uint8_t pal[256]);
 extern uint8_t iter_to_index(int iter, int max_iter);
 extern void asm_pause(unsigned int loops);
@@ -13,75 +13,49 @@ extern void asm_pause(unsigned int loops);
 #define MAX_ITER 50   // keep same value used when building palette / testing
 
 // MMIO (DTEK-V memory map / addresses)
-#define VGA_FRAMEBUF  ((volatile uint8_t *)0x08000000UL)   // UL stands for unsigned long (not strictly necessary)
+#define VGA  ((volatile uint8_t *)0x08000000UL)   // UL stands for unsigned long (not strictly necessary)
 #define SWITCH   ((volatile uint32_t *)0x04000010UL)
 #define BUTTON   ((volatile uint32_t *)0x040000D0UL)
-#define VGA_
 
 /* selected ports bits */
 #define SWITCH_BIT_MASK  (1u << 0) // 1u means 1 unsigned. (iu << 0) is basically just 1
 #define BUTTON_DRAW_MASK (1u << 0)
 
 // Getting switch and button
-static int get_sw(void) {
-    return (int)(*SWITCH);
-}
-static int get_btn(void) {
-    return (int)(*BUTTON);
-}
+static int get_sw(void) {return *SWITCH;}
+static int get_btn(void) {return *BUTTON;}
 
  /* Clear the entire VGA buffer area by writing the value 0 (=black) */
 static void clearScreen(void){
-    volatile uint8_t *fb = VGA_FRAMEBUF;
+    volatile uint8_t *fb = VGA;
     for (int i = 0; i < W*H; ++i) {
-        fb[i] = 0x0000;
-    }
-}
-
-/* Changes from which line in the buffer the VGA starts drawing */
-static void scroll(void){
-
-    // se lecture 6
-
-}
-
-static void drawSprite(void){
-
-    // a routine that draws a sprite to the screen at some location 
+        fb[i] = 0;
+        }
 }
 
 /* Draw using functions from fractals.c */
-static void draw_fractal_to_fb(int fractal_type, uint8_t palette[256]) {
-    volatile uint8_t *fb = VGA_FRAMEBUF;
+static void draw_fractal_to_fb(int fractal_type, uint8_t palette[256], int32_t scale) {
+    volatile uint8_t *fb = VGA;
 
     clearScreen();
 
     /* view parameters (static basic view) */
-    float center_x = -0.5f;
-    float center_y =  0.0f;
-    float scale    =  3.0f;
-
-    float halfw = (float)W / 2.0f;
-    float halfh = (float)H / 2.0f;
-    float pixel = scale / (float)W;
-
-    
+    int32_t center_x = -32768;   // -0.5 * 65536
+    int32_t center_y =  0;
 
     for (int py = 0; py < H; ++py) {
         for (int px = 0; px < W; ++px) {
-            float cx = center_x + ((float)px - halfw) * pixel;
-            float cy = center_y + ((float)py - halfh) * pixel;
+            int32_t cx = center_x + ((int64_t)(px - W/2) * scale) / W;
+            int32_t cy = center_y + ((int64_t)(py - H/2) * scale) / H;
+        
+            int iter = mandelbrot(cx, cy, MAX_ITER);
 
-            if (fractal_type == 0) {
-                int iter = mandelbrot(cx, cy, MAX_ITER);
-                uint8_t idx = iter_to_index(iter, MAX_ITER);
-                fb[py * W + px] = palette[idx]; // Drawing with vga
-
-            } else {
-                int iter = burningship(cx, cy, MAX_ITER);
-                uint8_t idx = iter_to_index(iter, MAX_ITER);
-                fb[py * W + px] = palette[idx]; // Drawing with vga
+            if (fractal_type == 1) {
+                iter = burningship(cx, cy, MAX_ITER);
             }
+
+            uint8_t idx = iter_to_index(iter, MAX_ITER);
+            fb[py * W + px] = palette[idx]; // Drawing with vga
 
         }
     }
@@ -93,30 +67,30 @@ int main(void) {
     build_palette(palette);
 
     int last_btn = 0;
+    
 
     while (1) {
         int sw  = get_sw();
         int btn = get_btn();
+        int32_t scale = 3 << 16;
+
+        int fractal_type = 0; // Mandelbrot
 
         if (sw & SWITCH_BIT_MASK) {
-            int fractal_type = 1; // Burning Ship
-            if ((btn & BUTTON_DRAW_MASK) && !(last_btn & BUTTON_DRAW_MASK)) {
-            draw_fractal_to_fb(fractal_type, palette);
-        }
-        } else {
-            int fractal_type = 0; // Mandelbrot
-            if ((btn & BUTTON_DRAW_MASK) && !(last_btn & BUTTON_DRAW_MASK)) {
-            draw_fractal_to_fb(fractal_type, palette);
-        }
+            fractal_type = 1; // Burning Ship
         }
 
-        /* on rising edge of draw button, render fractal */
+        if ((btn & BUTTON_DRAW_MASK) && !(last_btn & BUTTON_DRAW_MASK)) {
+            draw_fractal_to_fb(fractal_type, palette, scale);
+        }
+        scale = (scale * 62259) >> 16;  // 62259 / 65536 ≈ 0.95
         
 
+        /* on rising edge of draw button, render fractal */
         last_btn = btn;
 
         /* simple debounce/idle */
-        asm_pause(200000);
+        asm_pause(200);
     }
 
     /* never reached */

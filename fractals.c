@@ -5,7 +5,7 @@
 #define MAX_ITER 50 // Maximum iterations for fractal calculations
 
 // Function for absolute values (<math.h> not allowed)
-static inline float abs(float f) {
+static inline int32_t abs(int32_t f) {
     if (f < 0){
         f = -f;
     }
@@ -14,16 +14,18 @@ static inline float abs(float f) {
 }
 
 // Mandelbrot set equation iteration
-int mandelbrot(float c_re, float c_im, int max_iter) {
-    float x = 0.0f;
-    float y = 0.0f;
+int mandelbrot(int32_t c_re, int32_t c_im, int max_iter) {
+    int32_t x = 0;
+    int32_t y = 0;
 
     int i = 0;
 
     // Mandelbrot [Z = Z^2 + C]
-    while (i < max_iter && (x*x + y*y) <= 4.0f) {
-        float x_new = x*x - y*y + c_re; // Real part
-        y = 2.0f * x * y + c_im; // Imaginary part
+    while (i < max_iter && ((int64_t)x*x + (int64_t)y*y) <= (int64_t)4 << 32) {
+        int32_t x_new = ((int64_t)x*x - (int64_t)y*y) >> 16;
+        x_new += c_re;
+        y = ((int64_t)2*x*y) >> 16;
+        y += c_im; // Imaginary part
         x = x_new;
         i++;
     }
@@ -31,19 +33,22 @@ int mandelbrot(float c_re, float c_im, int max_iter) {
 }
 
 // Burning Ship equation iteration
-int burningship(float c_re, float c_im, int max_iter) {
-    float x = 0.0f;
-    float y = 0.0f;
+int burningship(int32_t c_re, int32_t c_im, int max_iter) {
+    int32_t x = 0;
+    int32_t y = 0;
 
     int i = 0;
 
     // Burning ship [Z = (abs(Re(Z))) + i*abs((Im(Z))))^2 + C]
-    while (i < max_iter && (x*x + y*y) <= 4.0f) {
-        float abs_x = abs(x);
-        float abs_y = abs(y);
+    while (i < max_iter && ((int64_t)x*x + (int64_t)y*y) <= (int64_t)4 << 32) {
+        int32_t abs_x = abs(x);
+        int32_t abs_y = abs(y);
 
-        float x_new = abs_x*abs_x - abs_y*abs_y + c_re; // Real part
-        y = 2.0f * abs_x * abs_y + c_im; // Imaginary part
+        
+        int32_t x_new = ((int64_t)abs_x*abs_x - (int64_t)abs_y*abs_y) >> 16;
+        x_new += c_re;
+        y = ((int64_t)2*abs_x*abs_y) >> 16;
+        y += c_im;
         x = x_new;
 
         i++;
@@ -74,4 +79,3 @@ uint8_t iter_to_index(int iter, int max_iter) {
     }
     return (uint8_t)idx;
 }
-
