@@ -22,9 +22,6 @@ extern void asm_pause(unsigned int loops);
 #define SWITCH_BIT_MASK  (1u << 0) // 1u means 1 unsigned. (iu << 0) is basically just 1
 #define BUTTON_DRAW_MASK (1u << 0)
 
-// Calling assembly pause function for delay
-extern void asm_pause(unsigned int loops);
-
 // Getting switch and button
 static int get_sw(void) {
     return (int)(*SWITCH);
@@ -68,18 +65,20 @@ static void draw_fractal_to_fb(int fractal_type, uint8_t palette[256]) {
     float halfh = (float)H / 2.0f;
     float pixel = scale / (float)W;
 
+    
+
     for (int py = 0; py < H; ++py) {
         for (int px = 0; px < W; ++px) {
             float cx = center_x + ((float)px - halfw) * pixel;
             float cy = center_y + ((float)py - halfh) * pixel;
 
             if (fractal_type == 0) {
-                iter = mandelbrot(cx, cy, MAX_ITER);
+                int iter = mandelbrot(cx, cy, MAX_ITER);
                 uint8_t idx = iter_to_index(iter, MAX_ITER);
-
                 fb[py * W + px] = palette[idx]; // Drawing with vga
+
             } else {
-                iter = burningship(cx, cy, MAX_ITER);
+                int iter = burningship(cx, cy, MAX_ITER);
                 uint8_t idx = iter_to_index(iter, MAX_ITER);
                 fb[py * W + px] = palette[idx]; // Drawing with vga
             }
