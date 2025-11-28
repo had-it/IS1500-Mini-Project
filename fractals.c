@@ -74,3 +74,4 @@ uint8_t iter_to_index(int iter, int max_iter) {
     }
     return (uint8_t)idx;
 }
+

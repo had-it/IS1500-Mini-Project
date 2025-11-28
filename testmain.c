@@ -68,15 +68,11 @@ static void draw_fractal_to_fb(int fractal_type, uint8_t palette[256]) {
     float halfh = (float)H / 2.0f;
     float pixel = scale / (float)W;
 
-    
-
     for (int py = 0; py < H; ++py) {
         for (int px = 0; px < W; ++px) {
             float cx = center_x + ((float)px - halfw) * pixel;
             float cy = center_y + ((float)py - halfh) * pixel;
-            
 
-            int iter;
             if (fractal_type == 0) {
                 iter = mandelbrot(cx, cy, MAX_ITER);
                 uint8_t idx = iter_to_index(iter, MAX_ITER);
