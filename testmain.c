@@ -14,6 +14,7 @@ extern void asm_pause(unsigned int loops);
 
 // MMIO (DTEK-V memory map / addresses)
 #define VGA      ((volatile uint8_t *)0x08000000UL)   // UL stands for unsigned long (not strictly necessary)
+#define VGA_CTRL ((volatile uint8_t *)0x04000100UL)
 #define SWITCH   ((volatile uint32_t *)0x04000010UL)
 #define BUTTON   ((volatile uint32_t *)0x040000D0UL)
 
@@ -35,6 +36,11 @@ static void clearScreen(void){
     for (int i = 0; i < W*H; ++i) {
         fb[i] = 0;
     }
+}
+
+static void dma_swap(uint8_t *buffer){
+    VGA_CTRL[1] = (uint32_t)buffer;
+    VGA_CTRL[0] = 0;    //swap
 }
 
 /* Draw using functions from fractals.c */
@@ -76,7 +82,7 @@ int main(void) {
     int fractal_type;
 
     static uint8_t palette[256];
-    static uint8_t *palette; // pointer for choosed pallette, needs for draw_fractal
+    static uint8_t *current_palette; // pointer for choosed pallette, needs for draw_fractal
 
     // Initial center of the Fractals
     int32_t center_x = -32768;   // -0.5 * (1 << 16)
@@ -93,11 +99,13 @@ int main(void) {
         // Switch 0
         if (sw & (1u << 0) && ((btn & BUTTON_DRAW_MASK) && !(last_btn & BUTTON_DRAW_MASK))) {
             build_palette(palette, 0); // Palette 1
+            current_palette = palette;
             break; // Exit loop after selecting palette
         }
         // Switch 1
         if (sw & (1u << 1) && ((btn & BUTTON_DRAW_MASK) && !(last_btn & BUTTON_DRAW_MASK))) {
             build_palette(palette, 1); // Palette 2
+            current_palette = palette;
             break; // Exit loop after selecting palette
         }    
 
@@ -118,13 +126,13 @@ int main(void) {
         // Switch 0
         if (sw & (1u << 0) && ((btn & BUTTON_DRAW_MASK) && !(last_btn & BUTTON_DRAW_MASK)))  { // If switch 0 is on and button is pressed
             fractal_type = 0; // Mandelbrot
-            draw_fractal_to_fb(fractal_type, palette, scale, center_x, center_y);
+            draw_fractal_to_fb(fractal_type, current_palette, scale, center_x, center_y);
             break; // Exit loop after drawing
         }
         // Switch 1
         if (sw & (1u << 1) && ((btn & BUTTON_DRAW_MASK) && !(last_btn & BUTTON_DRAW_MASK))) { // If switch 1 is on and button is pressed
             fractal_type = 1; // Burning Ship
-            draw_fractal_to_fb(fractal_type, palette, scale, center_x, center_y);
+            draw_fractal_to_fb(fractal_type, current_palette, scale, center_x, center_y);
             break; // Exit loop after drawing
         }
 
