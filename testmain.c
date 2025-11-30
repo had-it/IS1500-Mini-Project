@@ -38,10 +38,8 @@ static void clearScreen(void){
 }
 
 /* Draw using functions from fractals.c */
-static void draw_fractal_to_fb(int fractal_type, uint8_t palette[256], int32_t scale) {
+static void draw_fractal_to_fb(int fractal_type, uint8_t palette[256]) {
     volatile uint8_t *fb = VGA;
-
-    clearScreen();
 
     /* view parameters (static basic view) */
     int32_t center_x = -32768;   // -0.5 * (1 << 16)
@@ -71,34 +69,51 @@ static void draw_fractal_to_fb(int fractal_type, uint8_t palette[256], int32_t s
 
 int main(void) {
 
+    clearScreen();
+
+    int sw  = get_sw();
+    int btn = get_btn();
+    int last_btn = 0;
+
     // Menu for palette opens 
-    // 3 switches for each palette
+
+    static uint8_t palette[256];
+
+    // Switch 0
+    if (sw & (SWITCH_BIT_MASK << 0) && ((btn & BUTTON_DRAW_MASK) && !(last_btn & BUTTON_DRAW_MASK))) {
+        static uint8_t palette[256];
+        build_palette(palette); // Palette 1
+    }
+    // Switch 1
+    if (sw & (SWITCH_BIT_MASK << 1) && ((btn & BUTTON_DRAW_MASK) && !(last_btn & BUTTON_DRAW_MASK))) {
+        static uint8_t palette[256];
+        build_palette(palette); // Palette 2
+    }    
+
+    clearScreen();
+
     // Menu for fractals
     // 2 switches for each fractal
+    int fractal_type;
+    // Switch 0
+    if (sw & (SWITCH_BIT_MASK << 0) && ((btn & BUTTON_DRAW_MASK) && !(last_btn & BUTTON_DRAW_MASK)))  {
+        fractal_type = 0; // Mandelbrot
+    }
+    // Switch 1
+    if (sw & (SWITCH_BIT_MASK << 1) && ((btn & BUTTON_DRAW_MASK) && !(last_btn & BUTTON_DRAW_MASK))) {
+        fractal_type = 1; // Burning Ship
+    }
+
+    clearScreen();
     // Draw fractal
-    // 
+    draw_fractal_to_fb(fractal_type, palette);   
 
-
-    // Making a palette
-    static uint8_t palette[256];
-    build_palette(palette);
-
-    int last_btn = 0;
 
     while (1) {
         int sw  = get_sw();
         int btn = get_btn();
         int32_t scale = 5 * (1 << 16);  // 3.0 in fixed point format (Q16.16)
 
-        int fractal_type = 0; // Mandelbrot
-
-        if (sw & SWITCH_BIT_MASK) {
-            fractal_type = 1; // Burning Ship
-        }
-
-        if ((btn & BUTTON_DRAW_MASK) && !(last_btn & BUTTON_DRAW_MASK)) {
-            draw_fractal_to_fb(fractal_type, palette, scale);
-        }      
         scale = (scale * 62259) >> 16;  // 62259 / 65536 ≈ 0.95
 
         last_btn = btn;
