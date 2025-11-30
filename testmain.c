@@ -45,6 +45,8 @@ static void draw_fractal_to_fb(int fractal_type, uint8_t palette[256], int32_t s
     int half_w = W / 2;
     int half_h = H / 2;
 
+    // choose fractal outside the loop for time optimization 
+
     for (int py = 0; py < H; ++py) {
         for (int px = 0; px < W; ++px) {
             int32_t cx = center_x + (int32_t)(((int64_t)(px - half_w) * pixel));
