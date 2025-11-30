@@ -3,7 +3,7 @@
 // Functions from fractals.c 
 extern int mandelbrot(int32_t c_re, int32_t c_im, int max_iter);
 extern int burningship(int32_t c_re, int32_t c_im, int max_iter);
-extern void build_palette(uint8_t pal[256]);
+extern void build_palette(uint8_t pal[256], int palette);
 extern uint8_t iter_to_index(int iter, int max_iter);
 extern void asm_pause(unsigned int loops);
 
@@ -73,8 +73,6 @@ int main(void) {
     int fractal_type;
     int32_t pixel = (int32_t)(((int64_t)scale) / W);
     
-    static uint8_t palette[256];
-
     // Initial center of the Fractals
     int32_t center_x = -32768;   // -0.5 * (1 << 16)
     int32_t center_y = 0;
@@ -87,15 +85,15 @@ int main(void) {
         int btn = get_btn();
 
         // Switch 0
-        if (sw & (SWITCH_BIT_MASK << 0) && ((btn & BUTTON_DRAW_MASK) && !(last_btn & BUTTON_DRAW_MASK))) {
-            //static uint8_t palette[256];
-            build_palette(palette); // Palette 1
+        if (sw & (1u << 0) && ((btn & BUTTON_DRAW_MASK) && !(last_btn & BUTTON_DRAW_MASK))) {
+            build_palette(palette1, 0); // Palette 1
+            palette = palette1;
             break; // Exit loop after selecting palette
         }
         // Switch 1
-        if (sw & (SWITCH_BIT_MASK << 1) && ((btn & BUTTON_DRAW_MASK) && !(last_btn & BUTTON_DRAW_MASK))) {
-            //static uint8_t palette[256];
-            build_palette(palette); // Palette 2
+        if (sw & (1u << 1) && ((btn & BUTTON_DRAW_MASK) && !(last_btn & BUTTON_DRAW_MASK))) {
+            build_palette(palette2, 1); // Palette 2
+            palette = palette2;
             break; // Exit loop after selecting palette
         }    
 
@@ -112,13 +110,13 @@ int main(void) {
         int btn = get_btn();
 
         // Switch 0
-        if (sw & (SWITCH_BIT_MASK << 0) && ((btn & BUTTON_DRAW_MASK) && !(last_btn & BUTTON_DRAW_MASK)))  { // If switch 0 is on and button is pressed
+        if (sw & (1u << 0) && ((btn & BUTTON_DRAW_MASK) && !(last_btn & BUTTON_DRAW_MASK)))  { // If switch 0 is on and button is pressed
             fractal_type = 0; // Mandelbrot
             draw_fractal_to_fb(fractal_type, palette, scale, center_x, center_y);
             break; // Exit loop after drawing
         }
         // Switch 1
-        if (sw & (SWITCH_BIT_MASK << 1) && ((btn & BUTTON_DRAW_MASK) && !(last_btn & BUTTON_DRAW_MASK))) { // If switch 1 is on and button is pressed
+        if (sw & (1u << 1) && ((btn & BUTTON_DRAW_MASK) && !(last_btn & BUTTON_DRAW_MASK))) { // If switch 1 is on and button is pressed
             fractal_type = 1; // Burning Ship
             draw_fractal_to_fb(fractal_type, palette, scale, center_x, center_y);
             break; // Exit loop after drawing

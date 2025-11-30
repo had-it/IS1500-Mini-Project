@@ -56,11 +56,23 @@ int burningship(int32_t c_re, int32_t c_im, int max_iter) {
     return i;
 }
 
+uint8_t rgb332(uint8_t r, uint8_t g, uint8_t b) {
+    return ((r & 0xE0))       |   // 3 MSB av r
+           ((g & 0xE0) >> 3) |   // 3 MSB av g
+           ((b & 0xC0) >> 6);    // 2 MSB av b
+}
+
 
 // One simple palette (blue -> cyan -> white)
-void build_palette(uint8_t pal[256]) {
+void build_palette(uint8_t pal[256], int palette) {
+    
     for (int i = 0; i < 256; i++) {
-        pal[i] = (uint8_t)i;
+        if (palette == 0) {
+            pal[i] = rgb332(i, i/4, 0);
+        }
+        else if (palette == 1){
+            pal[i] = rgb332(i/2, i/4, i);
+        }
     }
 }
 
