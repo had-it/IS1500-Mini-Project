@@ -69,7 +69,10 @@ int main(void) {
     int sw  = get_sw();
     int btn = get_btn();
     int last_btn = 0;
+
     int fractal_type;
+    int32_t pixel = (int32_t)(((int64_t)scale) / W);
+    
     static uint8_t palette[256];
 
     // Initial center of the Fractals
@@ -97,6 +100,7 @@ int main(void) {
         }    
 
         last_btn = btn;
+        asm_pause(200000); // Small pause to debounce button presses
     }
 
     last_btn = 0;
@@ -133,22 +137,22 @@ int main(void) {
 
         if ((btn & BUTTON_DRAW_MASK) && (last_btn & BUTTON_DRAW_MASK)) { // If button is held down
             if (sw & (1u << 0)) { // If switch 1 is on, we go up
-                center_y += 1; // Move the center up 
+                center_y += pixel; // Move the center up 
                 draw_fractal_to_fb(fractal_type, palette, scale, center_x, center_y);
             } else if (sw & (1u << 1)) { // If switch 2 is on, we go down
-                center_y -= 1; // Move the center down
+                center_y -= pixel; // Move the center down
                 draw_fractal_to_fb(fractal_type, palette, scale, center_x, center_y);
             } else if (sw & (1u << 2)) { // If switch 3 is on, we go right
-                center_x += 1; // Move the center right
+                center_x += pixel; // Move the center right
                 draw_fractal_to_fb(fractal_type, palette, scale, center_x, center_y);
             } else if (sw & (1u << 3)) { // If switch 4 is on, we go left
-                center_x -= 1; // Move the center left
+                center_x -= pixel; // Move the center left
                 draw_fractal_to_fb(fractal_type, palette, scale, center_x, center_y);
             } else if (sw & (1u << 4)) { // If switch 5 is on, we zoom in
-                scale = (scale * 95) / 100; // Zoom in by reducing scale
+                scale -= pixel; // Zoom in by reducing scale
                 draw_fractal_to_fb(fractal_type, palette, scale, center_x, center_y);
             } else if (sw & (1u << 5)) { // If switch 6 is on, we zoom out
-                scale = (scale * 105) / 100; // Zoom out by increasing scale
+                scale += pixel; // Zoom out by increasing scale
                 draw_fractal_to_fb(fractal_type, palette, scale, center_x, center_y);
             }
         }
