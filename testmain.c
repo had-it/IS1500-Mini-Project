@@ -70,6 +70,15 @@ static void draw_fractal_to_fb(int fractal_type, uint8_t palette[256], int32_t s
 }
 
 int main(void) {
+
+    // Menu for palette opens 
+    // 3 switches for each palette
+    // Menu for fractals
+    // 2 switches for each fractal
+    // Draw fractal
+    // 
+
+
     // Making a palette
     static uint8_t palette[256];
     build_palette(palette);
@@ -79,7 +88,7 @@ int main(void) {
     while (1) {
         int sw  = get_sw();
         int btn = get_btn();
-        int32_t scale = 3 * (1 << 16);  // 3.0 in fixed point format (Q16.16)
+        int32_t scale = 5 * (1 << 16);  // 3.0 in fixed point format (Q16.16)
 
         int fractal_type = 0; // Mandelbrot
 
