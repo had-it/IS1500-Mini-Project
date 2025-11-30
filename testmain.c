@@ -85,13 +85,13 @@ int main(void) {
 
         // Switch 0
         if (sw & (SWITCH_BIT_MASK << 0) && ((btn & BUTTON_DRAW_MASK) && !(last_btn & BUTTON_DRAW_MASK))) {
-            static uint8_t palette[256];
+            //static uint8_t palette[256];
             build_palette(palette); // Palette 1
             break; // Exit loop after selecting palette
         }
         // Switch 1
         if (sw & (SWITCH_BIT_MASK << 1) && ((btn & BUTTON_DRAW_MASK) && !(last_btn & BUTTON_DRAW_MASK))) {
-            static uint8_t palette[256];
+            //static uint8_t palette[256];
             build_palette(palette); // Palette 2
             break; // Exit loop after selecting palette
         }    
@@ -100,7 +100,7 @@ int main(void) {
     }
 
     last_btn = 0;
-    clearScreen();
+    //clearScreen();
 
     // Fractal selection loop (panel 2)
     while (1) {
@@ -124,7 +124,6 @@ int main(void) {
         asm_pause(200000); // Small pause to debounce button presses
     }
 
-    clearScreen();
     last_btn = 0;
 
     // Navigation loop (panel 3)
