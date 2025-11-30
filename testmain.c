@@ -45,18 +45,20 @@ static void draw_fractal_to_fb(int fractal_type, uint8_t palette[256], int32_t s
     int half_w = W / 2;
     int half_h = H / 2;
 
-    // choose fractal outside the loop for time optimization 
+    // Choose fractal outside the loop for speedoptimization
+    int (*fractal_func)(int32_t, int32_t, int);
+    if (fractal_type == 0){
+        fractal_func = mandelbrot;
+    } else {
+        fractal_func = burningship;
+    }
 
     for (int py = 0; py < H; ++py) {
         for (int px = 0; px < W; ++px) {
             int32_t cx = center_x + (int32_t)(((int64_t)(px - half_w) * pixel));
             int32_t cy = center_y + (int32_t)(((int64_t)(py - half_h) * pixel));
 
-            int iter = mandelbrot(cx, cy, MAX_ITER);
-
-            if (fractal_type == 1) {
-                iter = burningship(cx, cy, MAX_ITER);
-            }
+            int iter = fractal_func(cx, cy, MAX_ITER);
 
             uint8_t idx = iter_to_index(iter, MAX_ITER);
             fb[py * W + px] = palette[idx]; // Drawing with vga
@@ -73,11 +75,8 @@ int main(void) {
     int last_btn = 0;
     int fractal_type;
 
-
-    
-    static uint8_t palette1[256];
-    static uint8_t palette2[256];
-    static uint8_t *palette;
+    static uint8_t palette[256];
+    static uint8_t *palette; // pointer for choosed pallette, needs for draw_fractal
 
     // Initial center of the Fractals
     int32_t center_x = -32768;   // -0.5 * (1 << 16)
@@ -93,14 +92,12 @@ int main(void) {
 
         // Switch 0
         if (sw & (1u << 0) && ((btn & BUTTON_DRAW_MASK) && !(last_btn & BUTTON_DRAW_MASK))) {
-            build_palette(palette1, 0); // Palette 1
-            palette = palette1;
+            build_palette(palette, 0); // Palette 1
             break; // Exit loop after selecting palette
         }
         // Switch 1
         if (sw & (1u << 1) && ((btn & BUTTON_DRAW_MASK) && !(last_btn & BUTTON_DRAW_MASK))) {
-            build_palette(palette2, 1); // Palette 2
-            palette = palette2;
+            build_palette(palette, 1); // Palette 2
             break; // Exit loop after selecting palette
         }    
 
