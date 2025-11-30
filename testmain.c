@@ -72,7 +72,10 @@ int main(void) {
 
     int fractal_type;
     int32_t pixel = (int32_t)(((int64_t)scale) / W);
-    
+    static uint8_t palette1[256];
+    static uint8_t palette2[256];
+    static uint8_t *palette;
+
     // Initial center of the Fractals
     int32_t center_x = -32768;   // -0.5 * (1 << 16)
     int32_t center_y = 0;
