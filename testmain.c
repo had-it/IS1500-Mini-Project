@@ -69,10 +69,14 @@ int main(void) {
     int sw  = get_sw();
     int btn = get_btn();
     int last_btn = 0;
-
     int fractal_type;
+
     int32_t pixel = (int32_t)(((int64_t)scale) / W);
     
+    static uint8_t palette1[256];
+    static uint8_t palette2[256];
+    static uint8_t *palette;
+
     // Initial center of the Fractals
     int32_t center_x = -32768;   // -0.5 * (1 << 16)
     int32_t center_y = 0;
@@ -98,7 +102,7 @@ int main(void) {
         }    
 
         last_btn = btn;
-        asm_pause(200000); // Small pause to debounce button presses
+        asm_pause(200000);
     }
 
     last_btn = 0;
