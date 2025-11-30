@@ -18,7 +18,7 @@ extern void asm_pause(unsigned int loops);
 #define BUTTON   ((volatile uint32_t *)0x040000D0UL)
 
 // Masked bits for switches and buttons
-#define SWITCH_BIT_MASK  (1u << 0) // 1u means 1 unsigned. (iu << 0) is basically just 1
+#define SWITCH_BIT_MASK  (1u << 0) // 1u means 1 unsigned. (1u << 0) is basically just 1
 #define BUTTON_DRAW_MASK (1u << 0)
 
 // Getting switch and button
@@ -38,14 +38,10 @@ static void clearScreen(void){
 }
 
 /* Draw using functions from fractals.c */
-static void draw_fractal_to_fb(int fractal_type, uint8_t palette[256], int32_t scale) {
+static void draw_fractal_to_fb(int fractal_type, uint8_t palette[256], int32_t scale, int32_t center_x, int32_t center_y) {
     volatile uint8_t *fb = VGA;
 
     clearScreen();
-
-    /* view parameters (static basic view) */
-    int32_t center_x = -32768;   // -0.5 * (1 << 16)
-    int32_t center_y =  0;
 
     int32_t pixel = (int32_t)(((int64_t)scale) / W);
 
@@ -54,8 +50,8 @@ static void draw_fractal_to_fb(int fractal_type, uint8_t palette[256], int32_t s
 
     for (int py = 0; py < H; ++py) {
         for (int px = 0; px < W; ++px) {
-            int32_t cx = center_x + (int32_t)(( (int64_t)(px - half_w) * pixel ));
-            int32_t cy = center_y + (int32_t)(( (int64_t)(py - half_h) * pixel ));
+            int32_t cx = center_x + (int32_t)(((int64_t)(px - half_w) * pixel));
+            int32_t cy = center_y + (int32_t)(((int64_t)(py - half_h) * pixel));
 
             int iter = mandelbrot(cx, cy, MAX_ITER);
 
@@ -76,21 +72,59 @@ int main(void) {
 
     int last_btn = 0;
 
+    // Initial center of the Fractals
+    int32_t center_x = -32768;   // -0.5 * (1 << 16)
+    int32_t center_y = 0;
+
+    int32_t scale = 5 * (1 << 16);  // 5.0 in fixed point format (Q16.16)
     while (1) {
         int sw  = get_sw();
         int btn = get_btn();
-        int32_t scale = 3 * (1 << 16);  // 3.0 in fixed point format (Q16.16)
 
         int fractal_type = 0; // Mandelbrot
 
-        if (sw & SWITCH_BIT_MASK) {
+        if (sw & SWITCH_BIT_MASK) { // If switch is on (1)
             fractal_type = 1; // Burning Ship
+            center_x = -0.5 * (1 << 16); // -0.5 in Q16.16
+            center_y = 0 * (1 << 16); // 0
         }
 
-        if ((btn & BUTTON_DRAW_MASK) && !(last_btn & BUTTON_DRAW_MASK)) {
-            draw_fractal_to_fb(fractal_type, palette, scale);
-        }      
-        scale = (scale * 62259) >> 16;  // 62259 / 65536 ≈ 0.95
+        if ((btn & BUTTON_DRAW_MASK) && !(last_btn & BUTTON_DRAW_MASK)) { // If button is pressed and was not pressed before
+            draw_fractal_to_fb(fractal_type, palette, scale, center_x, center_y);
+            break; // Exit the loop after drawing
+        }
+
+        last_btn = btn;
+        asm_pause(200000); // Small pause to debounce button presses
+    }
+
+    last_btn = 0;
+
+    while (1) {
+        int sw  = get_sw();
+        int btn = get_btn();
+
+        if ((btn & BUTTON_DRAW_MASK) && (last_btn & BUTTON_DRAW_MASK)) { // If button is held down
+            if (sw & (1u << 0)) { // If switch 1 is on, we go up
+                center_y += 1; // Move the center up 
+                draw_fractal_to_fb(fractal_type, palette, scale, center_x, center_y);
+            } else if (sw & (1u << 1)) { // If switch 2 is on, we go down
+                center_y -= 1; // Move the center down
+                draw_fractal_to_fb(fractal_type, palette, scale, center_x, center_y);
+            } else if (sw & (1u << 2)) { // If switch 3 is on, we go right
+                center_x += 1; // Move the center right
+                draw_fractal_to_fb(fractal_type, palette, scale, center_x, center_y);
+            } else if (sw & (1u << 3)) { // If switch 4 is on, we go left
+                center_x -= 1; // Move the center left
+                draw_fractal_to_fb(fractal_type, palette, scale, center_x, center_y);
+            } else if (sw & (1u << 4)) { // If switch 5 is on, we zoom in
+                scale = (scale * 95) / 100; // Zoom in by reducing scale
+                draw_fractal_to_fb(fractal_type, palette, scale, center_x, center_y);
+            } else if (sw & (1u << 5)) { // If switch 6 is on, we zoom out
+                scale = (scale * 105) / 100; // Zoom out by increasing scale
+                draw_fractal_to_fb(fractal_type, palette, scale, center_x, center_y);
+            }
+        }
 
         last_btn = btn;
         asm_pause(200000); // Small pause to debounce button presses
