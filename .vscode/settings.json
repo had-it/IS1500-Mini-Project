@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "*.S": "c",
+        "labmain.C": "cpp"
+    }
+}

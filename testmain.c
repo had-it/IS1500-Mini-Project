@@ -18,6 +18,10 @@ extern void asm_pause(unsigned int loops);
 #define SWITCH   ((volatile uint32_t *)0x04000010UL)
 #define BUTTON   ((volatile uint32_t *)0x040000D0UL)
 
+// BUTTON 
+#define BUTTON_EDGE         ((volatile int*) 0x040000dc)
+#define BUTTON_INTERRUPT    ((volatile int*) 0x040000d8)
+
 // VGA DMA
 #define DMA_SWAP        VGA_CTRL[0]
 #define DMA_BACKBUFFER  VGA_CTRL[1]
@@ -79,13 +83,32 @@ static void draw_fractal_to_fb(int fractal_type, uint8_t palette[256], int32_t s
 
 static void button_edge(void){
     asm_pause(20000);
-    while((get_btn() & BUTTON_DRAW_MASK) != 0){
+    while((get_btn() & BUTTON_DRAW_MASK)){
         asm_pause(20000);
     }
     asm_pause(20000);
 }
 
+void handle_interrupt(unsigned cause) {
+
+    
+}
+
+void labinit(void)
+{
+  
+  asm volatile ("csrsi mie,16"); // machine interrupt enable control register. Accept interrupts from Timer
+  asm volatile ("csrsi mstatus,3"); // mstatus = machine status control register. Enabe interrupts
+
+  // Button
+  *BUTTON_EDGE = 0; //resets edgecapture to 0
+  *BUTTON_INTERRUPT = 0x4; //bit 1 enables interrupts
+
+  asm volatile ("csrsi mie,18"); // machine interrupt enable control register. Accept interrupts from Switches
+}
+
 int main(void) {
+    labinit();
     clearScreen();
 
     int sw  = get_sw();
@@ -182,11 +205,9 @@ int main(void) {
                 draw_fractal_to_fb(fractal_type, current_palette, scale, center_x, center_y);
             } else if (sw & (1u << 4)) { // If switch 5 is on, we zoom in
                 scale -= pixel; // Zoom in by reducing scale
-                pixel = (int32_t)(((int64_t)scale) / W); // Uptade pixel
                 draw_fractal_to_fb(fractal_type, current_palette, scale, center_x, center_y);
             } else if (sw & (1u << 5)) { // If switch 6 is on, we zoom out
                 scale += pixel; // Zoom out by increasing scale
-                pixel = (int32_t)(((int64_t)scale) / W); // Update pixel
                 draw_fractal_to_fb(fractal_type, current_palette, scale, center_x, center_y);
             }
         }
