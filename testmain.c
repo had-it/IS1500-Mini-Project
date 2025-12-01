@@ -184,11 +184,9 @@ int main(void) {
                 draw_fractal_to_fb(fractal_type, current_palette, scale, center_x, center_y);
             } else if (sw & (1u << 4)) { // If switch 5 is on, we zoom in
                 scale -= pixel; // Zoom in by reducing scale
-                pixel = (int32_t)(((int64_t)scale) / W); // Uptade pixel
                 draw_fractal_to_fb(fractal_type, current_palette, scale, center_x, center_y);
             } else if (sw & (1u << 5)) { // If switch 6 is on, we zoom out
                 scale += pixel; // Zoom out by increasing scale
-                pixel = (int32_t)(((int64_t)scale) / W); // Update pixel
                 draw_fractal_to_fb(fractal_type, current_palette, scale, center_x, center_y);
             }
         }
