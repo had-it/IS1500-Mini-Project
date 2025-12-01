@@ -14,9 +14,16 @@ extern void asm_pause(unsigned int loops);
 
 // MMIO (DTEK-V memory map / addresses)
 #define VGA      ((volatile uint8_t *)0x08000000UL)   // UL stands for unsigned long (not strictly necessary)
-#define VGA_CTRL ((volatile uint8_t *)0x04000100UL)
+#define VGA_CTRL ((volatile uint32_t *)0x04000100UL)
 #define SWITCH   ((volatile uint32_t *)0x04000010UL)
 #define BUTTON   ((volatile uint32_t *)0x040000D0UL)
+
+// VGA DMA
+#define DMA_SWAP        VGA_CTRL[0]
+#define DMA_BACKBUFFER  VGA_CTRL[1]
+#define DMA_STATUS      VGA_CTRL[3]
+
+
 
 // Masked bits for switches and buttons
 #define SWITCH_BIT_MASK  (1u << 0) // 1u means 1 unsigned. (1u << 0) is basically just 1
@@ -72,8 +79,15 @@ static void draw_fractal_to_fb(int fractal_type, uint8_t palette[256], int32_t s
     }
 }
 
-int main(void) {
+static void button_edge(void){
+    asm_pause(20000);
+    while((get_btn() & BUTTON_DRAW_MASK) != 0){
+        asm_pause(20000);
+    }
+    asm_pause(20000);
+}
 
+int main(void) {
     clearScreen();
 
     int sw  = get_sw();
@@ -93,47 +107,52 @@ int main(void) {
 
     // Palette selection loop (panel 1)
     while (1) {
-        int sw  = get_sw();
-        int btn = get_btn();
+        sw  = get_sw();
+        btn = get_btn();
 
         // Switch 0
-        if (sw & (1u << 0) && ((btn & BUTTON_DRAW_MASK) && !(last_btn & BUTTON_DRAW_MASK))) {
+        if ((btn & BUTTON_DRAW_MASK) && !(last_btn & BUTTON_DRAW_MASK)) {
+            if(sw & (1u << 0)) {
             build_palette(palette, 0); // Palette 1
             current_palette = palette;
+            button_edge();
             break; // Exit loop after selecting palette
         }
         // Switch 1
-        if (sw & (1u << 1) && ((btn & BUTTON_DRAW_MASK) && !(last_btn & BUTTON_DRAW_MASK))) {
+        if (sw & (1u << 1)) {
             build_palette(palette, 1); // Palette 2
             current_palette = palette;
+            button_edge();
             break; // Exit loop after selecting palette
-        }    
+        } 
+        }   
 
         last_btn = btn;
         asm_pause(200000);
     }
 
-    last_btn = 0;
-    asm_pause(200000);
-    
     //clearScreen();
 
     // Fractal selection loop (panel 2)
     while (1) {
-        int sw  = get_sw();
-        int btn = get_btn();
+        sw  = get_sw();
+        btn = get_btn();
 
         // Switch 0
-        if (sw & (1u << 0) && ((btn & BUTTON_DRAW_MASK) && !(last_btn & BUTTON_DRAW_MASK)))  { // If switch 0 is on and button is pressed
+        if (((btn & BUTTON_DRAW_MASK) && !(last_btn & BUTTON_DRAW_MASK)))  { 
+            if (sw & (1u << 0)) {// If switch 0 is on and button is pressed
             fractal_type = 0; // Mandelbrot
             draw_fractal_to_fb(fractal_type, current_palette, scale, center_x, center_y);
+            button_edge();
             break; // Exit loop after drawing
         }
         // Switch 1
-        if (sw & (1u << 1) && ((btn & BUTTON_DRAW_MASK) && !(last_btn & BUTTON_DRAW_MASK))) { // If switch 1 is on and button is pressed
+        if (sw & (1u << 1))  { // If switch 1 is on and button is pressed
             fractal_type = 1; // Burning Ship
             draw_fractal_to_fb(fractal_type, current_palette, scale, center_x, center_y);
+            button_edge();
             break; // Exit loop after drawing
+        }
         }
 
         last_btn = btn;
@@ -145,32 +164,36 @@ int main(void) {
 
     // Navigation loop (panel 3)
     while (1) {
-        int sw  = get_sw();
-        int btn = get_btn();
+        sw  = get_sw();
+        btn = get_btn();
+
 
         if ((btn & BUTTON_DRAW_MASK) && (last_btn & BUTTON_DRAW_MASK)) { // If button is held down
+            asm_pause(200000);
             if (sw & (1u << 0)) { // If switch 1 is on, we go up
                 center_y += pixel; // Move the center up 
-                draw_fractal_to_fb(fractal_type, palette, scale, center_x, center_y);
+                draw_fractal_to_fb(fractal_type, current_palette, scale, center_x, center_y);
             } else if (sw & (1u << 1)) { // If switch 2 is on, we go down
                 center_y -= pixel; // Move the center down
-                draw_fractal_to_fb(fractal_type, palette, scale, center_x, center_y);
+                draw_fractal_to_fb(fractal_type, current_palette, scale, center_x, center_y);
             } else if (sw & (1u << 2)) { // If switch 3 is on, we go right
                 center_x += pixel; // Move the center right
-                draw_fractal_to_fb(fractal_type, palette, scale, center_x, center_y);
+                draw_fractal_to_fb(fractal_type, current_palette, scale, center_x, center_y);
             } else if (sw & (1u << 3)) { // If switch 4 is on, we go left
                 center_x -= pixel; // Move the center left
-                draw_fractal_to_fb(fractal_type, palette, scale, center_x, center_y);
+                draw_fractal_to_fb(fractal_type, current_palette, scale, center_x, center_y);
             } else if (sw & (1u << 4)) { // If switch 5 is on, we zoom in
                 scale -= pixel; // Zoom in by reducing scale
-                draw_fractal_to_fb(fractal_type, palette, scale, center_x, center_y);
+                pixel = (int32_t)(((int64_t)scale) / W); // Uptade pixel
+                draw_fractal_to_fb(fractal_type, current_palette, scale, center_x, center_y);
             } else if (sw & (1u << 5)) { // If switch 6 is on, we zoom out
                 scale += pixel; // Zoom out by increasing scale
-                draw_fractal_to_fb(fractal_type, palette, scale, center_x, center_y);
+                pixel = (int32_t)(((int64_t)scale) / W); // Update pixel
+                draw_fractal_to_fb(fractal_type, current_palette, scale, center_x, center_y);
             }
         }
-
         last_btn = btn;
+
         asm_pause(200000); // Small pause to debounce button presses        
     }
 
