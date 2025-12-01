@@ -23,8 +23,6 @@ extern void asm_pause(unsigned int loops);
 #define DMA_BACKBUFFER  VGA_CTRL[1]
 #define DMA_STATUS      VGA_CTRL[3]
 
-
-
 // Masked bits for switches and buttons
 #define SWITCH_BIT_MASK  (1u << 0) // 1u means 1 unsigned. (1u << 0) is basically just 1
 #define BUTTON_DRAW_MASK (1u << 0)
