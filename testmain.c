@@ -91,20 +91,18 @@ static void button_edge(void){
 
 void handle_interrupt(unsigned cause) {
 
-    
+
 }
 
 void labinit(void)
 {
-  
-  asm volatile ("csrsi mie,16"); // machine interrupt enable control register. Accept interrupts from Timer
-  asm volatile ("csrsi mstatus,3"); // mstatus = machine status control register. Enabe interrupts
+  asm volatile ("csrsi mstatus,3"); // mstatus = machine status control register. Enable interrupts
 
   // Button
   *BUTTON_EDGE = 0; //resets edgecapture to 0
   *BUTTON_INTERRUPT = 0x4; //bit 1 enables interrupts
 
-  asm volatile ("csrsi mie,18"); // machine interrupt enable control register. Accept interrupts from Switches
+  asm volatile ("csrsi mie,18"); // machine interrupt enable control register. Accept interrupts from Buttons
 }
 
 int main(void) {
