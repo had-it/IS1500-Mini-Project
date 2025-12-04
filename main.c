@@ -1,153 +1,183 @@
-/* Fractal Visualizer
-Date: 2025-12-xx
-Authors: 
-*/
+#include <stdint.h>
 
-/* ------ HARDWARE ------- */
-
-extern void delay(int);
-
+// Functions from fractals.c 
+extern int mandelbrot(int32_t c_re, int32_t c_im, int max_iter);
+extern int burningship(int32_t c_re, int32_t c_im, int max_iter);
+extern void build_palette(uint8_t pal[256], int palette);
+extern uint8_t iter_to_index(int iter, int max_iter);
 
 // Dimensions of the screen size
 #define W 320
 #define H 240
+#define MAX_ITER 50   // keep same value used when building palette / testing
 
-// Maximum number of iterations for pixels (the higher, the slower, but better quality)
-#define MAXI 50
+// MMIO (DTEK-V memory map / addresses)
+#define VGA      ((volatile uint8_t *)0x08000000UL)   // UL stands for unsigned long (not strictly necessary)
+#define SWITCH   ((volatile uint32_t *)0x04000010UL)
+#define BUTTON   ((volatile uint32_t *)0x040000D0UL)
 
-// ------- Switches and buttons ---------
+// BUTTON
+#define BUTTON_EDGE         ((volatile int*) 0x040000dc)
+#define BUTTON_INTERRUPT    ((volatile int*) 0x040000d8)
 
-// Buttons
-int get_btn(void) {
-  volatile int* button = (volatile int*) 0x040000d0; // The button is mapped to memory address 0x040000d0.
-  return (*button) & 1; // Return current status of the push-button (which lies in lsb)
+// Masked bits for switches and buttons
+#define SWITCH_BIT_MASK  (1u << 0) // 1u means 1 unsigned. (1u << 0) is basically just 1
+#define BUTTON_DRAW_MASK (1u << 0)
+
+// GLOBAL VARIABLES
+volatile int menu_state = 0;
+volatile int fractal_type = 0;
+static uint8_t palette[256];
+static uint8_t *current_palette; // pointer for choosed pallette, needs for draw_fractal
+static volatile int last_btn = 0; 
+
+// Initial center of the Fractals
+int32_t center_x = -32768;   // -0.5 * (1 << 16)
+int32_t center_y = 0;
+
+int32_t scale = 5 * (1 << 16);  // 5.0 in fixed point format (Q16.16)
+int32_t pixel;
+
+// Getting switch and button
+static int get_sw(void) {
+    return (*SWITCH);
+}
+static int get_btn(void) {
+    return (*BUTTON);
 }
 
-// Swtiches
-int get_sw( void ){
-  volatile int* switches = (volatile int*) 0x04000010;  //  The toggles (or switches) are mapped to memory address 0x04000010
-  return (*switches) & 0x3FF; // Checks the status of the switches in the 10 lsbs
-}
-
-// Fractaltypes and color palette
-
-int fractal_type = 0; // 0 = Mandelbrot, 1 = Burning Ship
-int color_palette = 0; // 0 = xx, 1 = xx
-
-
-// ------- Labinit and timeinterrupt ---------
-// Code from Lab3
-
-volatile unsigned short* T_Ctrl = (unsigned short*) 0x04000024;
-
-/* Below is the function that will be called when an interrupt is triggered. */
-void handle_interrupt(unsigned cause) 
-{
-    volatile unsigned int* T_Stat = (volatile unsigned int*) 0x04000020;
-    *T_Stat = 0;     // Clear TO bit, resetting the status
-    timeoutcount++;
-
-    if(timeoutcount == 10){
-        timeoutcount = 0; 
-        // set_display with first argument being the display and second being the int do be displayed
-        for(int i = 1; i<= 6; i++){
-            set_displays(i, get_time_digit(mytime, i));
-        }
-        tick( &mytime ); // Ticks the clock once
+ // Clearing the whole VGA buffer by setting all pixels to black (0)
+static void clearScreen(void){
+    volatile uint8_t *fb = VGA;
+    for (int i = 0; i < W*H; ++i) {
+        fb[i] = 0;
     }
-    *(T_Ctrl) = 0x5;
 }
 
-/* Add your code here for initializing interrupts. */ // Local interupts
-void labinit(void)
-{
-    
-  int period = ((30000000/10) - 1); // 10 ms (-1 because count to 0)
-  volatile unsigned short* T_periodLo = (unsigned short*) 0x04000028;
-  volatile unsigned short* T_periodHi = (unsigned short*) 0x0400002c;
 
-  *(T_periodLo) = period & 0xFFFF; // (16 LSB)
-  *(T_periodHi) = period >> 16; // (shifts 16 bits to the left = 16 MSB)
-  
-  *(T_Ctrl) = 0x5; // Start the timer and ITO=1
-  asm volatile ("csrsi mie,16"); // machine interrupt enable control register. Accept interrupts from Timer
+/* Draw using functions from fractals.c */
+static void draw_fractal_to_fb(int fractal_type, uint8_t palette[256], int32_t scale, int32_t center_x, int32_t center_y) {
+    volatile uint8_t *fb = VGA;
+    int32_t pixel = (int32_t)(((int64_t)scale) / W);
+
+    int half_w = W / 2;
+    int half_h = H / 2;
+
+    // Choose fractal outside the loop for speedoptimization
+    int (*fractal_func)(int32_t, int32_t, int);
+    if (fractal_type == 0){
+        fractal_func = mandelbrot;
+    } else {
+        fractal_func = burningship;
+    }
+
+    for (int py = 0; py < H; ++py) {
+        for (int px = 0; px < W; ++px) {
+            int32_t cx = center_x + (int32_t)(((int64_t)(px - half_w) * pixel));
+            int32_t cy = center_y + (int32_t)(((int64_t)(py - half_h) * pixel));
+
+            int iter = fractal_func(cx, cy, MAX_ITER);
+
+            uint8_t idx = iter_to_index(iter, MAX_ITER);
+            fb[py * W + px] = palette[idx]; // Drawing with vga
+        }
+    }
+}
+
+
+
+void handle_interrupt(unsigned cause) {
+
+    *BUTTON_EDGE = 0; // Reset the edge button
+    int btn = get_btn() & 1;
+
+    // Return if no rising edge detected 
+    if (btn){
+        last_btn = 1;
+        return;
+    }
+
+    last_btn = 0;
+    int sw = get_sw();
+
+    /* ------------- 1. PALETTE MENU -------------*/
+    if (menu_state == 0){
+        if(sw & (1u << 0)) {
+            build_palette(palette, 0); // Palette 1
+            current_palette = palette;
+            menu_state = 1;
+            return; 
+        }
+        // Switch 1
+        if (sw & (1u << 1)) {
+            build_palette(palette, 1); // Palette 2
+            current_palette = palette;
+            menu_state = 1;
+            return; 
+        } 
+        return;
+    }
+    /* ------------- 2. FRACTAL MENU -------------*/
+    else if (menu_state == 1){
+
+        if (sw & (1u << 0)) {// If switch 0 is on and button is pressed
+                fractal_type = 0; // Mandelbrot
+                draw_fractal_to_fb(fractal_type, current_palette, scale, center_x, center_y);
+                menu_state = 2;
+                return; 
+            }
+            // Switch 1
+        if (sw & (1u << 1))  { // If switch 1 is on and button is pressed
+                fractal_type = 1; // Burning Ship
+                draw_fractal_to_fb(fractal_type, current_palette, scale, center_x, center_y);
+                menu_state = 2;
+                return; 
+            }
+            return;
+    }
+    /* ------------- 3. NAVIGATION STATE -------------*/
+    else if (menu_state == 2){
+        if (sw & (1u << 0)) { // If switch 1 is on, we go up
+                    center_y += pixel; // Move the center up 
+                } else if (sw & (1u << 1)) { // If switch 2 is on, we go down
+                    center_y -= pixel; // Move the center down
+                } else if (sw & (1u << 2)) { // If switch 3 is on, we go right
+                    center_x += pixel; // Move the center right
+                } else if (sw & (1u << 3)) { // If switch 4 is on, we go left
+                    center_x -= pixel; // Move the center left
+                } else if (sw & (1u << 4)) { // If switch 5 is on, we zoom in
+                    scale -= pixel; // Zoom in by reducing scale
+                } else if (sw & (1u << 5)) { // If switch 6 is on, we zoom out
+                    scale += pixel; // Zoom out by increasing scale
+                }
+                draw_fractal_to_fb(fractal_type, current_palette, scale, center_x, center_y);
+                return;
+        }
+}
+
+void labinit(void) {
   asm volatile ("csrsi mstatus,3"); // mstatus = machine status control register. Enabe interrupts
+
+  // Button
+  *BUTTON_EDGE = 0; //resets edgecapture to 0
+  *BUTTON_INTERRUPT = 0x1; // 1 on bit0 enables interrupt
+
+  asm volatile ("csrsi mie,18"); // machine interrupt enable control register. Accept interrupts from Switches
 }
 
-/* ------ MAIN ------- */
+int main(void) {
+    labinit();
+    clearScreen();
 
-int main(void){
+    pixel = (int32_t)(((int64_t)scale) / W);
 
-    // Set up VGA - taken from canvas lectureslides 5
-
-    /* A framebuffer located at address 0x8000000 (a writing to this area means writing to the screen)
-    A VGA Pixelbuffer DMA at 0x4000100 (a device that fetches data from framebuffer and sends it to the screen) */
-
-    // Create a pointer to the VGA pixel buffer. This is the “drawing” area
-    volatile char *VGA = (volatile char*) 0x08000000; 
-
-    // Fill the drawing area with some values
-    for (int i = 0; i < 320*480; i++){
-        VGA[i] = i / 320;
+    while (1) {     
+        // Palette selection loop (panel 1)
+        //clearScreen();
+        // Fractal selection loop (panel 2)
+        //clearScreen();
+        // Navigation loop (panel 3)
     }
 
-    unsigned int y_ofs= 0;
-
-    // Create a pointer to the VGA DMA
-    volatile int *VGA_CTRL = (volatile int*) 0x04000100;
-
-    // DISPLAY FRACTAL
-    fractals(fractal_type); // Mandelbrot
-
-    while(1){
-
-        // VGA - from lectureslides in Canvas
-
-        // Update the backbuffer to point to the VGA pixel buffer + 320*y_ofs
-        *(VGA_CTRL+1) = (unsigned int) (VGA+y_ofs*320);
-        // Write to the backbuffer control register to perform the swap.
-        *(VGA_CTRL+0) = 0;
-        // Increase y_ofs by one and wrap around when reaching 240
-        y_ofs= (y_ofs+ 1) % 240;
-        for (int i = 0; i < 1000000; i++){
-            // Delay for some unit of time
-            asm volatile ("nop");
-        }
-
-
-        // Switch: color palette
-        if (get_sw() == 0x100) {
-
-        }
-            // time interrupt
-
-        // Switch: change fractal
-        if (get_sw() == 0x200) {
-
-        }
-            // time interrupt
-
-        // Switch: Zoom out
-        if (get_sw() == 0x300) {
-
-        }
-
- 
-        // Switch: Navigation Y and X axis
-        if (get_sw() == 0x400) {
-
-        }
-
-        // Button: Infinite Zoom in (while pressed once - zooming in, while pressed again - zomming stops)
-        if (get_btn()) {
-
-        }
-
-        // delay??
-
-
-    }
-    return 0;
-
-
+    return 0; // Does not reach here
 }
