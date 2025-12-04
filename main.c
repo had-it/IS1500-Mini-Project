@@ -16,18 +16,26 @@ extern uint8_t iter_to_index(int iter, int max_iter);
 #define H 240
 #define MAX_ITER 50   // keep same value used when building palette / testing
 
-// MMIO (DTEK-V memory map / addresses)
+// VGA
 #define VGA      ((volatile uint8_t *)0x08000000UL)   // UL stands for unsigned long (not strictly necessary)
+#define VGA_CTRL ((volatile uint32_t *)0x04000100UL) //-
+
+// VGA DMA
+#define DMA_SWAP        VGA_CTRL[0]
+#define DMA_BACKBUFFER  VGA_CTRL[1]
+#define DMA_STATUS      VGA_CTRL[3]
+
+// Two framebuffers inside the VGA frame-memory region
+#define FB_ADDR      (0x08000000u)   // Base address of framebuffer region
+#define FB2_ADDR     (FB_ADDR + (W * H))   // Second framebuffer address. difference between two fbs is that one frambuffer is after another in memory
+
+// SWITCH
 #define SWITCH   ((volatile uint32_t *)0x04000010UL)
-#define BUTTON   ((volatile uint32_t *)0x040000D0UL)
 
 // BUTTON
+#define BUTTON   ((volatile uint32_t *)0x040000D0UL)
 #define BUTTON_EDGE         ((volatile int*) 0x040000dc)
 #define BUTTON_INTERRUPT    ((volatile int*) 0x040000d8)
-
-// Masked bits for switches and buttons
-#define SWITCH_BIT_MASK  (1u << 0) // 1u means 1 unsigned. (1u << 0) is basically just 1
-#define BUTTON_DRAW_MASK (1u << 0)
 
 // GLOBAL VARIABLES
 volatile int menu_state = 0;
@@ -59,10 +67,24 @@ static void clearScreen(void){
     }
 }
 
+// current front and back buffer addresses
+static uint32_t bb_addr = FB2_ADDR;
+static uint32_t fb_addr = FB_ADDR;
+
+
+static void buffer_swap(uint32_t phys_addr) {
+    DMA_BACKBUFFER = phys_addr; // set backbuffer address
+    DMA_SWAP = 0;  // This triggers the swap
+
+    // wait for swap to complete
+    while (DMA_STATUS & 0x1) {
+        ; // spin (very short)
+    }
+}
 
 /* Draw using functions from fractals.c */
 static void draw_fractal_to_fb(int fractal_type, uint8_t palette[256], int32_t scale, int32_t center_x, int32_t center_y) {
-    volatile uint8_t *fb = VGA;
+    uint8_t *bb = (uint8_t *) bb_addr; // Pointer to the backbuffer
     int32_t pixel = (int32_t)(((int64_t)scale) / W);
 
     int half_w = W / 2;
@@ -77,16 +99,24 @@ static void draw_fractal_to_fb(int fractal_type, uint8_t palette[256], int32_t s
     }
 
     for (int py = 0; py < H; ++py) {
+        int32_t cy = center_y + (int32_t)(((int64_t)(py - half_h) * pixel));
+        uint8_t *row = &bb[py * W];
+        int32_t cx = center_x + (int32_t)(((int64_t)(- half_w) * pixel));
         for (int px = 0; px < W; ++px) {
-            int32_t cx = center_x + (int32_t)(((int64_t)(px - half_w) * pixel));
-            int32_t cy = center_y + (int32_t)(((int64_t)(py - half_h) * pixel));
-
             int iter = fractal_func(cx, cy, MAX_ITER);
-
+            cx += pixel;
             uint8_t idx = iter_to_index(iter, MAX_ITER);
-            fb[py * W + px] = palette[idx]; // Drawing with vga
+            row[px] = palette[idx];
         }
     }
+
+     /* swap to the buffer we just wrote, and flip for next frame */
+    buffer_swap(bb_addr);
+    
+    // Swap front and back buffer addresses
+    uint32_t tmp = bb_addr; 
+    bb_addr = fb_addr; 
+    fb_addr = tmp;
 }
 
 
