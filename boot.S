@@ -125,9 +125,3 @@ _start:
 	jal main
 	
 loop:	j loop
-
-
-enable_interrupts:
-csrsi mie,16 # Enables timer interrupts specifically (mie bit 16 sets bit 4 of mie (since 16 = 1 << 4). Bit 4 = MTIE (Machine Timer Interrupt Enable).).
-csrsi mstatus,3 # this line allows interrupts to actually be taken after being enabled in mie. Enables global interrupt handling
-jr ra
