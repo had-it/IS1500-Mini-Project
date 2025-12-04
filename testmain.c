@@ -31,6 +31,7 @@ volatile int menu_state = 0;
 volatile int fractal_type = 0;
 static uint8_t palette[256];
 static uint8_t *current_palette; // pointer for choosed pallette, needs for draw_fractal
+static volatile int last_btn = 0; 
 
 // Initial center of the Fractals
 int32_t center_x = -32768;   // -0.5 * (1 << 16)
@@ -85,13 +86,14 @@ static void draw_fractal_to_fb(int fractal_type, uint8_t palette[256], int32_t s
     }
 }
 
-static volatile int last_btn = 0;
+
 
 void handle_interrupt(unsigned cause) {
 
     *BUTTON_EDGE = 0; // Reset the edge button
     int btn = get_btn() & 1;
 
+    // Return if no rising edge detected 
     if (btn){
         last_btn = 1;
         return;
