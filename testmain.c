@@ -89,14 +89,7 @@ static volatile int last_btn = 0;
 
 void handle_interrupt(unsigned cause) {
 
-    int edge = *BUTTON_EDGE;
     *BUTTON_EDGE = 0; // Reset the edge button
-
-    // Return if no edge
-    if (edge == 0){
-        return;
-    }
-
     int btn = get_btn() & 1;
 
     if (btn){
@@ -104,14 +97,8 @@ void handle_interrupt(unsigned cause) {
         return;
     }
 
-    if(!last_btn){
-        return;
-    }
-
     last_btn = 0;
-
     int sw = get_sw();
-
 
     /* ------------- 1. PALETTE MENU -------------*/
     if (menu_state == 0){
