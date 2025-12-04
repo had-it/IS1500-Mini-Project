@@ -100,13 +100,12 @@ void labinit(void)
 
   // Button
   *BUTTON_EDGE = 0; //resets edgecapture to 0
-  *BUTTON_INTERRUPT = 0x4; //bit 1 enables interrupts
+  *BUTTON_INTERRUPT = 0x1; //bit 1 enables interrupts
 
   asm volatile ("csrsi mie,18"); // machine interrupt enable control register. Accept interrupts from Buttons
 }
 
 int main(void) {
-    labinit();
     clearScreen();
 
     int sw  = get_sw();
