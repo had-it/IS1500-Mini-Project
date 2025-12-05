@@ -120,7 +120,6 @@ static void draw_fractal_to_fb(int fractal_type, uint8_t palette[256], int32_t s
 }
 
 
-
 void handle_interrupt(unsigned cause) {
 
     *BUTTON_EDGE = 0; // Reset the edge button
@@ -191,12 +190,11 @@ void handle_interrupt(unsigned cause) {
 }
 
 void labinit(void) {
-  asm volatile ("csrsi mstatus,3"); // mstatus = machine status control register. Enabe interrupts
 
   // Button
   *BUTTON_EDGE = 0; //resets edgecapture to 0
   *BUTTON_INTERRUPT = 0x1; // 1 on bit0 enables interrupt
-
+  asm volatile ("csrsi mstatus,3"); // mstatus = machine status control register. Enable interrupts
   asm volatile ("csrsi mie,18"); // machine interrupt enable control register. Accept interrupts from Switches
 }
 
