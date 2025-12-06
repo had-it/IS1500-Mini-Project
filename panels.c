@@ -58,24 +58,17 @@ static void black_background(uint8_t *fb) {
     }
 }
 
-static inline void put_pixel(uint8_t *fb, int x, int y, uint8_t col) {
-    if ((unsigned)x >= (unsigned)W || (unsigned)y >= (unsigned)H){
-        return;
-    }
-    fb[y * W + x] = col;
-}
-
-static void rect(uint8_t *fb, int x0, int y0, int w, int h, uint8_t col) {
+static void draw_rect(uint8_t *fb, int x0, int y0, int w, int h) {
     if (w <= 0 || h <= 0) return;
     int x1 = x0 + w - 1;
     int y1 = y0 + h - 1;                            
     for (int x = x0; x <= x1; ++x) {
-        put_pixel(fb, x, y0, col); 
-        put_pixel(fb, x, y1, col);
+        fb[y0 * W + x] = 255;
+        fb[y1 * W + x] = 255;
     }
     for (int y = y0; y <= y1; ++y) {
-        put_pixel(fb, x0, y, col); 
-        put_pixel(fb, x1, y, col);
+        fb[y * W + x0] = 255;
+        fb[y * W + x1] = 255;
     }
 }
 
