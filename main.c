@@ -210,20 +210,28 @@ int main(void) {
     clearScreen();
 
     pixel = (int32_t)(((int64_t)scale) / W);
-
-    while (1) {   
-        static int last_sw0 = -1;
-        int sw0 = get_sw() & 1;
-        if (menu_state == 0 || menu_state == 1) {
+    
+while (1) {
+        if (menu_state == 0) {
+            static int last_sw0 = -1;
+            int sw0 = (get_sw() & 1) ? 1 : 0;
             if (sw0 != last_sw0) {
                 draw_fractal_panel_and_swap(sw0, menu_state, bb_addr, fb_addr);
                 last_sw0 = sw0;
             }
-            for (volatile int d = 0; d < 20000; ++d);
+            for (volatile int d = 0; d < 20000; ++d) ;
+        } else if (menu_state == 1) {
+            /* keep chooser visible and update when SW0 toggles */
+            static int last_sw0 = -1;
+            int sw0 = (get_sw() & 1) ? 1 : 0;
+            if (sw0 != last_sw0) {
+                draw_fractal_panel_and_swap(sw0, menu_state, bb_addr, fb_addr);
+                last_sw0 = sw0;
+            }
+            for (volatile int d = 0; d < 20000; ++d) ;
         } else {
             asm volatile ("wfi");
         }
     }
-
     return 0; // Does not reach here
 }
