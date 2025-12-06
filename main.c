@@ -120,7 +120,7 @@ void handle_interrupt(unsigned cause) {
     // Return if no rising edge detected 
     if (get_btn() & 0x1){
         last_btn = 1;
-        //return;
+        return;
     }
     last_btn = 0;
 
@@ -194,7 +194,7 @@ while (1) {
                 draw_fractal_panel_and_swap(sw0, menu_state, bb_addr, fb_addr);
                 last_sw0 = sw0;
             }
-            for (volatile int d = 0; d < 20000; ++d) ;
+            asm_pause(2000);
         } else if (menu_state == 1) {
             /* keep chooser visible and update when SW0 toggles */
             static int last_sw0 = -1;
@@ -203,7 +203,7 @@ while (1) {
                 draw_fractal_panel_and_swap(sw0, menu_state, bb_addr, fb_addr);
                 last_sw0 = sw0;
             }
-            for (volatile int d = 0; d < 20000; ++d) ;
+            asm_pause(2000);
         } else {
             asm volatile ("wfi");
         }
