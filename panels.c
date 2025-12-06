@@ -111,7 +111,6 @@ void draw_fractal_panel_and_swap(int selected_right, int menu_state, uint32_t bb
         L2 = "BURNINGSHIP";
     }
 
-
     // background 
     fill_background(bb, 0, 0, W, H, (uint8_t)BLACK);
 

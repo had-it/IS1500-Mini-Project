@@ -10,6 +10,7 @@ extern int mandelbrot(int32_t c_re, int32_t c_im, int max_iter);
 extern int burningship(int32_t c_re, int32_t c_im, int max_iter);
 extern void build_palette(uint8_t pal[256], int palette);
 extern uint8_t iter_to_index(int iter, int max_iter);
+extern void asm_pause(int loop);
 
 // Functions from panels.c
 extern void draw_fractal_panel_and_swap(int selected_right, int menu_state, uint32_t bb_addr, uint32_t fb_addr);
@@ -24,7 +25,7 @@ extern void draw_fractal_panel_and_swap(int selected_right, int menu_state, uint
 #define VGA_CTRL ((volatile uint32_t *)0x04000100UL) //-
 
 // VGA DMA
-#define DMA_SWAP        VGA_CTRL[0]
+#define DMA_BUFFER      VGA_CTRL[0]
 #define DMA_BACKBUFFER  VGA_CTRL[1]
 #define DMA_STATUS      VGA_CTRL[3]
 
@@ -65,17 +66,9 @@ static int get_btn(void) {
     return (*BUTTON);
 }
 
- // Clearing the whole VGA buffer by setting all pixels to black (0)
-static void clearScreen(void){
-    volatile uint8_t *fb = VGA;
-    for (int i = 0; i < W*H; ++i) {
-        fb[i] = 0;
-    }
-}
-
 void buffer_swap(uint32_t bb_addr) {
     DMA_BACKBUFFER = bb_addr; // set backbuffer address
-    DMA_SWAP = 0;  // This triggers the swap
+    DMA_BUFFER = 0;  // This triggers the swap
 
     // wait for swap to complete
     while (DMA_STATUS & 0x1) {
@@ -120,50 +113,41 @@ static void draw_fractal_to_fb(int fractal_type, uint8_t palette[256], int32_t s
     fb_addr = tmp;
 }
 
-
-
 void handle_interrupt(unsigned cause) {
 
     *BUTTON_EDGE = 0; // Reset the edge button
-    int btn = get_btn() & 1;
 
     // Return if no rising edge detected 
-    if (btn){
+    if (get_btn() & 0x1){
         last_btn = 1;
-        return;
+        //return;
     }
-
     last_btn = 0;
-    int sw = get_sw();
 
     /* ------------- 1. PALETTE MENU -------------*/
     if (menu_state == 0){
-        if((sw & (1u << 0)) == 0) {
+        if((get_sw() & 0x1) == 0) {
             build_palette(palette, 0); // Palette 1 - fire
-            current_palette = palette;
-            menu_state = 1;
-            return; 
         }
         // Switch 1
-        if (sw & (1u << 0)) {
+        if (get_sw() & 0x1) {
             build_palette(palette, 1); // Palette 2 - sea
-            current_palette = palette;
-            menu_state = 1;
-            return; 
         } 
+        current_palette = palette;
+        menu_state = 1;
         return;
     }
     /* ------------- 2. FRACTAL MENU -------------*/
     else if (menu_state == 1){
 
-        if ((sw & (1u << 0)) == 0) {// If switch 0 is off
+        if ((get_sw() & 0x1) == 0) {// If switch 0 is off
                 fractal_type = 0; // Mandelbrot
                 draw_fractal_to_fb(fractal_type, current_palette, scale, center_x, center_y);
                 menu_state = 2;
                 return; 
             }
             // Switch 1
-        if (sw & (1u << 0))  { // If switch 0 is on
+        if (get_sw() & 0x1)  { // If switch 0 is on
                 fractal_type = 1; // Burning Ship
                 draw_fractal_to_fb(fractal_type, current_palette, scale, center_x, center_y);
                 menu_state = 2;
@@ -173,27 +157,25 @@ void handle_interrupt(unsigned cause) {
     }
     /* ------------- 3. NAVIGATION STATE -------------*/
     else if (menu_state == 2){
-        if (sw & (1u << 0)) { // If switch 1 is on, we go up
-                    center_y += pixel; // Move the center up 
-                } else if (sw & (1u << 1)) { // If switch 2 is on, we go down
-                    center_y -= pixel; // Move the center down
-                } else if (sw & (1u << 2)) { // If switch 3 is on, we go right
-                    center_x += pixel; // Move the center right
-                } else if (sw & (1u << 3)) { // If switch 4 is on, we go left
-                    center_x -= pixel; // Move the center left
-                } else if (sw & (1u << 4)) { // If switch 5 is on, we zoom in
-                    scale -= (pixel*10); // Zoom in by reducing scale
-                } else if (sw & (1u << 5)) { // If switch 6 is on, we zoom out
-                    scale += (pixel*10); // Zoom out by increasing scale
-                }
-                draw_fractal_to_fb(fractal_type, current_palette, scale, center_x, center_y);
-                return;
+        if (get_sw() & 0x1) { // If switch 1 is on, we go up
+            center_y += pixel; // Move the center up 
+        } else if (get_sw() & 0x2) { // If switch 2 is on, we go down
+            center_y -= pixel; // Move the center down
+        } else if (get_sw() & 0x4) { // If switch 3 is on, we go right
+            center_x += pixel; // Move the center right
+        } else if (get_sw() & 0x8) { // If switch 4 is on, we go left
+            center_x -= pixel; // Move the center left
+        } else if (get_sw() & 0x10) { // If switch 5 is on, we zoom in
+            scale -= (pixel*10); // Zoom in by reducing scale
+        } else if (get_sw() & 0x20) { // If switch 6 is on, we zoom out
+            scale += (pixel*10); // Zoom out by increasing scale
+        }
+        draw_fractal_to_fb(fractal_type, current_palette, scale, center_x, center_y);
+        return;
         }
 }
 
 void labinit(void) {
-
-  // Button
   *BUTTON_EDGE = 0; //resets edgecapture to 0
   *BUTTON_INTERRUPT = 0x1; // 1 on bit0 enables interrupt
   asm volatile ("csrsi mstatus,3"); // mstatus = machine status control register. Enable interrupts
@@ -202,7 +184,6 @@ void labinit(void) {
 
 int main(void) {
     labinit();
-
     pixel = (int32_t)(((int64_t)scale) / W);
     
 while (1) {
