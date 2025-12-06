@@ -107,10 +107,6 @@ static void draw_fractal_to_fb(int fractal_type, uint8_t palette[256], int32_t s
      /* swap to the buffer we just wrote, and flip for next frame */
     buffer_swap(bb_addr);
     
-    // Swap front and back buffer addresses
-    uint32_t tmp = bb_addr; 
-    bb_addr = fb_addr; 
-    fb_addr = tmp;
 }
 
 void handle_interrupt(unsigned cause) {

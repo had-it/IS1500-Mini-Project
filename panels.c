@@ -39,20 +39,12 @@ static inline void put_pixel(uint8_t *fb, int x, int y, uint8_t col) {
 }
 
 static void fill_background(uint8_t *fb, int x0, int y0, int w, int h, uint8_t col) {
-    if (w <= 0 || h <= 0) return;
-    int x1 = x0 + w;
-    int y1 = y0 + h;
-    if (x0 < 0) x0 = 0;
-    if (y0 < 0) y0 = 0;
-    if (x1 > W) x1 = W;
-    if (y1 > H) y1 = H;
     for (int y = y0; y < y1; ++y)
         for (int x = x0; x < x1; ++x)
             fb[y * W + x] = col;
 }
 
 static void rect(uint8_t *fb, int x0, int y0, int w, int h, uint8_t col) {
-    if (w <= 0 || h <= 0) return;
     int x1 = x0 + w - 1;
     int y1 = y0 + h - 1;                            
     for (int x = x0; x <= x1; ++x) {
