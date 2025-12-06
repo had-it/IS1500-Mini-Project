@@ -121,64 +121,74 @@ static void draw_fractal_to_fb(int fractal_type, uint8_t palette[256], int32_t s
 }
 
 
+
 void handle_interrupt(unsigned cause) {
-    int sw = get_sw();
-    int btn = get_btn() & 1;
+
     *BUTTON_EDGE = 0; // Reset the edge button
+    int btn = get_btn() & 1;
 
+    // Return if no rising edge detected 
+    if (btn){
+        last_btn = 1;
+        return;
+    }
 
-     if (btn && !last_btn) {
-        /* ------------- 1. PALETTE MENU -------------*/
-        if (menu_state == 0){
-            if((sw & (1u << 0)) == 0) {
-                build_palette(palette, 0); // Palette 1
-                current_palette = palette;
-                menu_state = 1;
+    last_btn = 0;
+    int sw = get_sw();
+
+    /* ------------- 1. PALETTE MENU -------------*/
+    if (menu_state == 0){
+        if(sw & (1u << 0)) {
+            build_palette(palette, 0); // Palette 1
+            current_palette = palette;
+            menu_state = 1;
+            return; 
+        }
+        // Switch 1
+        if (sw & (1u << 1)) {
+            build_palette(palette, 1); // Palette 2
+            current_palette = palette;
+            menu_state = 1;
+            return; 
+        } 
+        return;
+    }
+    /* ------------- 2. FRACTAL MENU -------------*/
+    else if (menu_state == 1){
+
+        if (sw & (1u << 0)) {// If switch 0 is on and button is pressed
+                fractal_type = 0; // Mandelbrot
+                draw_fractal_to_fb(fractal_type, current_palette, scale, center_x, center_y);
+                menu_state = 2;
+                return; 
             }
             // Switch 1
-            if (sw & (1u << 0)) {
-                build_palette(palette, 1); // Palette 2
-                current_palette = palette;
-                menu_state = 1;
-            } 
-        }
-        /* ------------- 2. FRACTAL MENU -------------*/
-        else if (menu_state == 1){
-
-            if ((sw & (1u << 0)) == 0) {// If switch 0 is on and button is pressed
-                    fractal_type = 0; // Mandelbrot
-                    draw_fractal_to_fb(fractal_type, current_palette, scale, center_x, center_y);
-                    menu_state = 2;
-                }
-                // Switch 1
-            if (sw & (1u << 0))  { // If switch 1 is on and button is pressed
-                    fractal_type = 1; // Burning Ship
-                    draw_fractal_to_fb(fractal_type, current_palette, scale, center_x, center_y);
-                    menu_state = 2;
-                }
-        }
-        /* ------------- 3. NAVIGATION STATE -------------*/
-        else if (menu_state == 2){
-            if (sw & (1u << 0)) { // If switch 1 is on, we go up
-                        center_y += pixel; // Move the center up 
-                    } else if (sw & (1u << 1)) { // If switch 2 is on, we go down
-                        center_y -= pixel; // Move the center down
-                    } else if (sw & (1u << 2)) { // If switch 3 is on, we go right
-                        center_x += pixel; // Move the center right
-                    } else if (sw & (1u << 3)) { // If switch 4 is on, we go left
-                        center_x -= pixel; // Move the center left
-                    } else if (sw & (1u << 4)) { // If switch 5 is on, we zoom in
-                        scale -= (pixel*10); // Zoom in by reducing scale
-                    } else if (sw & (1u << 5)) { // If switch 6 is on, we zoom out
-                        scale += (pixel*10); // Zoom out by increasing scale
-                    }
-                    draw_fractal_to_fb(fractal_type, current_palette, scale, center_x, center_y);
+        if (sw & (1u << 1))  { // If switch 1 is on and button is pressed
+                fractal_type = 1; // Burning Ship
+                draw_fractal_to_fb(fractal_type, current_palette, scale, center_x, center_y);
+                menu_state = 2;
+                return; 
             }
-                    last_btn = 1;
-     } else if (!btn) {
-        // Knappen släppt -> reset edge-detect så nästa tryck kan registreras
-        last_btn = 0;
+            return;
     }
+    /* ------------- 3. NAVIGATION STATE -------------*/
+    else if (menu_state == 2){
+        if (sw & (1u << 0)) { // If switch 1 is on, we go up
+                    center_y += pixel; // Move the center up 
+                } else if (sw & (1u << 1)) { // If switch 2 is on, we go down
+                    center_y -= pixel; // Move the center down
+                } else if (sw & (1u << 2)) { // If switch 3 is on, we go right
+                    center_x += pixel; // Move the center right
+                } else if (sw & (1u << 3)) { // If switch 4 is on, we go left
+                    center_x -= pixel; // Move the center left
+                } else if (sw & (1u << 4)) { // If switch 5 is on, we zoom in
+                    scale -= (pixel*10); // Zoom in by reducing scale
+                } else if (sw & (1u << 5)) { // If switch 6 is on, we zoom out
+                    scale += (pixel*10); // Zoom out by increasing scale
+                }
+                draw_fractal_to_fb(fractal_type, current_palette, scale, center_x, center_y);
+                return;
+        }
 }
 
 void labinit(void) {
@@ -203,7 +213,7 @@ int main(void) {
 
     while (1) {   
         static int last_sw0 = -1;
-        int sw0 = (get_sw() & 1) ? 1 : 0;
+        int sw0 = get_sw() & 1;
         if (menu_state == 0 || menu_state == 1) {
             if (sw0 != last_sw0) {
                 draw_fractal_panel_and_swap(sw0, menu_state, bb_addr, fb_addr);

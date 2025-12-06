@@ -102,8 +102,8 @@ void draw_fractal_panel_and_swap(int selected_right, int menu_state, uint32_t bb
     
     if (menu_state == 0){
         title = "CHOOSE PALETTE";
-        L1 = "SEA";
-        L2 = "LAVA";
+        L1 = "FIRE";
+        L2 = "SEA";
     }
     if (menu_state == 1){
         title = "CHOOSE FRACTAL";

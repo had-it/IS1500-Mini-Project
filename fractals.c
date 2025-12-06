@@ -68,10 +68,10 @@ void build_palette(uint8_t pal[256], int palette) {
     
     for (int i = 0; i < 256; i++) {
         if (palette == 0) {
-            pal[i] = rgb332(i, i/4, 0);
+            pal[i] = rgb332(i, i/4, 0); // Fire
         }
         else if (palette == 1){
-            pal[i] = rgb332(i/2, i/4, i);
+            pal[i] = rgb332(i/2, i/4, i); // Sea
         }
     }
 }
