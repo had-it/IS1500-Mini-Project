@@ -74,6 +74,12 @@ void buffer_swap(uint32_t bb_addr) {
     while (DMA_STATUS & 0x1) {
         continue;
     }
+
+    // Swap front and back buffer addresses
+    uint32_t tmp = bb_addr; 
+    bb_addr = fb_addr; 
+    fb_addr = tmp;
+
 }
 
 /* Draw using functions from fractals.c */
@@ -107,6 +113,7 @@ static void draw_fractal_to_fb(int fractal_type, uint8_t palette[256], int32_t s
      /* swap to the buffer we just wrote, and flip for next frame */
     buffer_swap(bb_addr);
     
+
 }
 
 void handle_interrupt(unsigned cause) {

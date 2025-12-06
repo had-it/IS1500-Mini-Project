@@ -50,51 +50,46 @@ static const uint8_t letters[][5] = {
     {0x61,0x51,0x49,0x45,0x43}
 };
 
-static inline void put_pixel(uint8_t *fb, int x, int y, uint8_t col) {
-    if ((unsigned)x >= (unsigned)W || (unsigned)y >= (unsigned)H){
-        return;
-    }
-    fb[y * W + x] = col;
-}
-
 static void black_background(uint8_t *fb) {
-    for (int i = 0; y < H; i++) {
-        for (int j = 0; x < W; j++){
+    for (int i = 0; i < H; i++) {
+        for (int j = 0; j < W; j++){
             fb[i * W + j] = 0;
         }
     }
 }
 
-static void rect(uint8_t *fb, int x0, int y0, int w, int h, uint8_t col) {
+static void draw_rect(uint8_t *fb, int x0, int y0, int w, int h) {
     int x1 = x0 + w - 1;
     int y1 = y0 + h - 1;                            
     for (int x = x0; x <= x1; ++x) {
-        put_pixel(fb, x, y0, col);
-        put_pixel(fb, x, y1, col);
+        fb[y0 * W + x] = 255;
+        fb[y1 * W + x] = 255;
     }
     for (int y = y0; y <= y1; ++y) {
-        put_pixel(fb, x0, y, col);
-        put_pixel(fb, x1, y, col);
+        fb[y * W + x0] = 255;
+        fb[y * W + x1] = 255;
     }
 }
 
-static void draw_char(uint8_t *fb, char ch, int x, int y, int scale, uint8_t col) {
-    const uint8_t *g = font5x7[(ch - 'A') + 1];
+static void draw_char(uint8_t *fb, char ch, int x, int y, int scale) {
+    const uint8_t *g = letters[(ch - 'A') + 1];
     for (int cx = 0; cx < 5; ++cx) {
         uint8_t bits = g[cx];
         for (int by = 0; by < 7; ++by) {
             if (bits & (1 << by)) {
                 int px = x + cx * scale;
                 int py = y + by * scale;
-                for (int sy = 0; sy < scale; ++sy)
-                    for (int sx = 0; sx < scale; ++sx)
-                        put_pixel(fb, px + sx, py + sy, col);
+                for (int sy = 0; sy < scale; ++sy){
+                    for (int sx = 0; sx < scale; ++sx){ 
+                        fb[(py + sy) * W + (px + sx)] = 255;
+                    }
+                }
             }
         }
     }
 }
 
-static void draw_string(uint8_t *fb, const char *s, int x, int y, int scale, uint8_t col) {
+static void draw_string(uint8_t *fb, const char *s, int x, int y, int scale) {
     int gap = scale;
     int cx = x;
     while (*s) {
@@ -102,7 +97,7 @@ static void draw_string(uint8_t *fb, const char *s, int x, int y, int scale, uin
             cx += (5 * scale) + gap; ++s; 
             continue; 
             }
-        draw_char(fb, *s, cx, y, scale, col);
+        draw_char(fb, *s, cx, y, scale);
         cx += (5 * scale) + gap;
         ++s;
     }
@@ -132,7 +127,7 @@ void draw_fractal_panel_and_swap(int selected_right, int menu_state, uint32_t bb
     int tscale = 2;
     int title_w = string_length(title) * ((5 * tscale) + tscale);
     int tx = (W - title_w) / 2;
-    draw_string(bb, title, tx, 8+35, tscale, (uint8_t)255); // white
+    draw_string(bb, title, tx, 8+35, tscale);
 
     // two boxes 
     int box_w = 140, box_h = 90, gap = 20;
@@ -144,13 +139,13 @@ void draw_fractal_panel_and_swap(int selected_right, int menu_state, uint32_t bb
 
     if (!selected_right) {
         // left thicker outline
-        rect(bb, left_box_x - 2, top_y - 2, box_w + 4, box_h + 4, (uint8_t)255);
-        rect(bb, left_box_x - 1, top_y - 1, box_w + 2, box_h + 2, (uint8_t)255);
-        rect(bb, right_box_x, top_y, box_w, box_h, (uint8_t)255);
+        draw_rect(bb, left_box_x - 2, top_y - 2, box_w + 4, box_h + 4);
+        draw_rect(bb, left_box_x - 1, top_y - 1, box_w + 2, box_h + 2);
+        draw_rect(bb, right_box_x, top_y, box_w, box_h);
     } else {
-        rect(bb, right_box_x - 2, top_y - 2, box_w + 4, box_h + 4, (uint8_t)255);
-        rect(bb, right_box_x - 1, top_y - 1, box_w + 2, box_h + 2, (uint8_t)255);
-        rect(bb, left_box_x, top_y, box_w, box_h, (uint8_t)255);
+        draw_rect(bb, right_box_x - 2, top_y - 2, box_w + 4, box_h + 4);
+        draw_rect(bb, right_box_x - 1, top_y - 1, box_w + 2, box_h + 2);
+        draw_rect(bb, left_box_x, top_y, box_w, box_h);
     }
 
     int lscale = 2;
@@ -160,8 +155,8 @@ void draw_fractal_panel_and_swap(int selected_right, int menu_state, uint32_t bb
     int L2_x = right_box_x + (box_w - L2_w) / 2;
     int Ly = top_y + (box_h / 2) - ((7 * lscale) / 2);
 
-    draw_string(bb, L1, L1_x, Ly, lscale, (uint8_t)255);
-    draw_string(bb, L2, L2_x, Ly, lscale, (uint8_t)255);
+    draw_string(bb, L1, L1_x, Ly, lscale);
+    draw_string(bb, L2, L2_x, Ly, lscale);
 
     buffer_swap(bb_addr);
 }
