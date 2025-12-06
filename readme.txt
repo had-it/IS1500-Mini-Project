@@ -20,11 +20,11 @@ Running the code:
 After compiling, run the program by typing: dtekv-run main.bin
 
 Program Instructions:
-The program itself is divided int three Menus. 
+The program itself is divided into three Menus. The program begins with Menu 0. 
 By manipulating the I/O peripherals of the DTEK-V Board, you will get diffrent outputs.
 
 - Menu 0:
-In this menu, the user chooses the palette they want the frractals to be drawn with. 
+In this menu, the user chooses the palette that they want the fractals to be drawn with. 
 There will appear a panel with two boxes with the names of the palettes.
 The user can choose between two palettes - "SEA" and "FIRE". 
 -- Sw0 is on: Selects SEA
@@ -32,8 +32,8 @@ The user can choose between two palettes - "SEA" and "FIRE".
 -- KEY1: Chooses the palette the user has selected and goes to Menu 1
 
 - Menu 1:
-In this menu, the user chooses which of the two fractals you want to visualize. 
-You will see a panel with two boxes with the names of the fractals.
+In this menu, the user chooses which of the two fractals they want to visualize. 
+There will ba a panel with two boxes with the names of the fractals.
 The fractals that the user can select are Mandelbrot Set and Burning Ship Fractal, 
 which are shown on the panel as "MANDELBROT" and "BURNING", respectively. 
 -- SW0 is on: Selects MANDELBROT
