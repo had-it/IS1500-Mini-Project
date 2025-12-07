@@ -20,23 +20,17 @@ extern void draw_menu_panel(int selected_right, int menu_state, uint32_t bb_addr
 #define MAX_ITER 50   // keep same value used when building palette / testing
 
 // VGA
-#define VGA      ((volatile uint8_t *)0x08000000UL)   // UL stands for unsigned long (not strictly necessary)
-#define VGA_CTRL ((volatile uint32_t *)0x04000100UL) //-
-
-// VGA DMA
+#define VGA      ((volatile uint8_t *)0x08000000)  
+#define VGA_CTRL ((volatile uint32_t *)0x04000100) 
 #define DMA_SWAP        VGA_CTRL[0]
 #define DMA_BACKBUFFER  VGA_CTRL[1]
 #define DMA_STATUS      VGA_CTRL[3]
-
-// Two framebuffers inside the VGA frame-memory region
 #define FB_ADDR      (0x08000000u)   // Base address of framebuffer region
 #define FB2_ADDR     (FB_ADDR + (W * H))   // Second framebuffer address. difference between two fbs is that one frambuffer is after another in memory
 
-// SWITCH
-#define SWITCH   ((volatile uint32_t *)0x04000010UL)
-
-// BUTTON
-#define BUTTON   ((volatile uint32_t *)0x040000D0UL)
+// BUTTON AND SWITCHES
+#define SWITCH   ((volatile uint32_t *)0x04000010)
+#define BUTTON   ((volatile uint32_t *)0x040000D0)
 #define BUTTON_EDGE         ((volatile int*) 0x040000dc)
 #define BUTTON_INTERRUPT    ((volatile int*) 0x040000d8)
 
@@ -63,14 +57,6 @@ static int get_sw(void) {
 }
 static int get_btn(void) {
     return (*BUTTON);
-}
-
- // Clearing the whole VGA buffer by setting all pixels to black (0)
-static void clearScreen(void){
-    volatile uint8_t *fb = VGA;
-    for (int i = 0; i < W*H; ++i) {
-        fb[i] = 0;
-    }
 }
 
 void buffer_swap(uint32_t bb_addr) {
@@ -119,8 +105,6 @@ static void draw_fractal_to_fb(int fractal_type, uint8_t palette[256], int32_t s
     bb_addr = fb_addr; 
     fb_addr = tmp;
 }
-
-
 
 void handle_interrupt(unsigned cause) {
 
@@ -192,8 +176,6 @@ void handle_interrupt(unsigned cause) {
 }
 
 void labinit(void) {
-
-  // Button
   *BUTTON_EDGE = 0; //resets edgecapture to 0
   *BUTTON_INTERRUPT = 0x1; // 1 on bit0 enables interrupt
   asm volatile ("csrsi mstatus,3"); // mstatus = machine status control register. Enable interrupts
@@ -202,9 +184,8 @@ void labinit(void) {
 
 int main(void) {
     labinit();
-
     pixel = (int32_t)(((int64_t)scale) / W);
-    
+
 while (1) {
         if (menu_state == 0) {
             static int last_sw0 = -1;

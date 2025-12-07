@@ -17,7 +17,6 @@ static int string_length(const char *s){
     return n;
 }
 
-
 // An array of letteres. NOTE: Each letter has 5 pixels horizontally and 7 vertically
 // Source: ChatGPT
 static const uint8_t letters[][5] = { 
@@ -103,7 +102,6 @@ static void draw_characters(uint8_t *fb, const char *ch, int x, int y, int size)
         new_x += (6 * size);       // New position of x. 6 because a letter uses 5 pixels horizontally (+ 1 needed for space)
     }
 }
-
 
 // draw the fractal-chooser panel
 void draw_menu_panel(int selected_right, int menu_state, uint32_t bb_addr, uint32_t fb_addr) {
