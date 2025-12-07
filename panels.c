@@ -5,6 +5,7 @@
 #define W 320
 #define H 240
 
+// Function from main.c
 extern void buffer_swap(void);
 
 // s is a pointer to the first char in a string, *s is the char at current position
@@ -71,6 +72,7 @@ static void draw_rect(uint8_t *fb, int x0, int y0, int w, int h) {
     }
 }
 
+// Draws character to buffer
 static void draw_characters(uint8_t *fb, const char *ch, int x, int y, int size) {
     int new_x = x;
     while (*ch) {        // Loops all character in the string
@@ -138,8 +140,9 @@ void draw_menu_panel(int selected_right, int menu_state, uint32_t bb_addr, uint3
     int rbox_x = lbox_x + box_w + 20;       // The left side of right box
     int top_y = 100;                        // Space above boxes
 
+    // We check which box it is, right or left
     if (!selected_right) {
-        // left thicker border
+        // draws twice for thicker border
         draw_rect(bb, lbox_x - 2, top_y - 2, box_w + 4, box_h + 4);
         draw_rect(bb, lbox_x - 1, top_y - 1, box_w + 2, box_h + 2);
         draw_rect(bb, rbox_x, top_y, box_w, box_h);
@@ -149,14 +152,21 @@ void draw_menu_panel(int selected_right, int menu_state, uint32_t bb_addr, uint3
         draw_rect(bb, lbox_x, top_y, box_w, box_h);
     }
 
+    // Finding the width of each option string (mandelbrot and burningship)
     int option1_w = string_length(option1) * ((5 * size) + size);
     int option2_w = string_length(option2) * ((5 * size) + size);
+    
+    // Finding the x values of each box
     int option1_x = lbox_x + (box_w - option1_w) / 2;
     int option2_x = rbox_x + (box_w - option2_w) / 2;
-    int Ly = top_y + (box_h / 2) - ((7 * size) / 2);
 
-    draw_characters(bb, option1, option1_x, Ly, size);
-    draw_characters(bb, option2, option2_x, Ly, size);
+    // Finding the y value of the center of the string in the box
+    int option_center_y = top_y + (box_h / 2) - ((7 * size) / 2);
 
+    // Draws the strings
+    draw_characters(bb, option1, option1_x, option_center_y, size);
+    draw_characters(bb, option2, option2_x, option_center_y, size);
+
+    // Swaps backbuffer with framebuffer
     buffer_swap();
 }
