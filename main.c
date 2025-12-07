@@ -190,22 +190,18 @@ int main(void) {
     pixel = (int32_t)(((int64_t)scale) / W);
     
 while (1) {
-        if (menu_state == 0) {
-            static int last_sw0 = -1;
-            int sw0 = (get_sw() & 1) ? 1 : 0;
-            if (sw0 != last_sw0) {
-                draw_menu_panel(sw0, menu_state, bb_addr, fb_addr);
-                last_sw0 = sw0;
-            }
-            asm_pause(2000);
-        } else if (menu_state == 1) {
-            /* keep chooser visible and update when SW0 toggles */
-            static int last_sw0 = -1;
-            int sw0 = (get_sw() & 1) ? 1 : 0;
-            if (sw0 != last_sw0) {
-                draw_menu_panel(sw0, menu_state, bb_addr, fb_addr);
-                last_sw0 = sw0;
-            }
+    static int last_sw0 = -1;
+    static int last_menu_state = -1;
+
+    int sw0 = get_sw() & 1;
+
+    if (menu_state == 0 || menu_state == 1) {
+        /* redraw when either the switch toggles or we just entered a different menu */
+        if (sw0 != last_sw0 || menu_state != last_menu_state) {
+            draw_menu_panel(sw0, menu_state, bb_addr, fb_addr);
+            last_sw0 = sw0;
+            last_menu_state = menu_state;
+        }
             asm_pause(2000);
         } else {
             asm volatile ("wfi"); // "wait for interrupt". Energysaving-mode for CPU
