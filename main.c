@@ -180,25 +180,19 @@ int main(void) {
     labinit();
     pixel = (int32_t)(((int64_t)scale) / W);
 
-while (1) {    
-        if (menu_state == 0) {
-            static int last_sw0 = -1;
-            int sw0 = (get_sw() & 1) ? 1 : 0;
-            if (sw0 != last_sw0) {
-                draw_menu_panel(sw0, menu_state, bb_addr, fb_addr);
-                last_sw0 = sw0;
-            }
-            for (volatile int d = 0; d < 20000; ++d) ;
-        } else if (menu_state == 1) {
-            static int last_sw0 = -1;
-            int sw0 = (get_sw() & 1) ? 1 : 0;
-            if (sw0 != last_sw0) {
-                draw_menu_panel(sw0, menu_state, bb_addr, fb_addr);
-                last_sw0 = sw0;
-            }
-            for (volatile int d = 0; d < 20000; ++d) ;
-        } else {
-            asm volatile ("wfi");
+    
+while (1) {
+    static int last_sw0 = -1;
+    static int last_menu_state = -1;
+    int sw0 = get_sw() & 1;
+    
+    if (menu_state == 0 || menu_state == 1) {
+        if (sw0 != last_sw0 || menu_state != last_menu_state) {
+            draw_menu_panel(sw0, menu_state, bb_addr, fb_addr);
+            last_sw0 = sw0;
+            last_menu_state = menu_state;
+        }} else {
+            asm volatile ("wfi"); // "wait for interrupt". Energysaving-mode for CPU
         }
     }
     return 0; // Does not reach here
