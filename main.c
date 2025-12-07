@@ -182,7 +182,7 @@ void labinit(void) {
   *BUTTON_EDGE = 0; //resets edgecapture to 0
   *BUTTON_INTERRUPT = 0x1; // 1 on bit0 enables interrupt
   asm volatile ("csrsi mstatus,3"); // mstatus = machine status control register. Enable interrupts
-  asm volatile ("csrsi mie,18"); // machine interrupt enable control register. Accept interrupts from Switches
+  asm volatile ("csrsi mie,18"); // machine interrupt enable control register. Accept interrupts from buttons
 }
 
 int main(void) {
@@ -208,7 +208,7 @@ while (1) {
             }
             asm_pause(2000);
         } else {
-            asm volatile ("wfi");
+            asm volatile ("wfi"); // "wait for interrupt". Energysaving-mode for CPU
         }
     }
     return 0; // Does not reach here
