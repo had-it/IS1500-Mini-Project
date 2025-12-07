@@ -35,15 +35,15 @@ The user can choose between two palettes - "SEA" and "FIRE".
 In this menu, the user chooses which of the two fractals they want to visualize. 
 There will ba a panel with two boxes with the names of the fractals.
 The fractals that the user can select are Mandelbrot Set and Burning Ship Fractal, 
-which are shown on the panel as "MANDELBROT" and "BURNING", respectively. 
--- SW0 is on: Selects MANDELBROT
--- SW0 is off: Selects BURNINGSHIP
+which are shown on the panel as "MANDELBROT" and "BURNINGSHIP", respectively. 
+-- SW0 is on: Selects BURNINGSHIP
+-- SW0 is off: Selects MANDELBROT
 -- KEY1: Chooses the fractal the user has selected and goes to Menu 2
 
 - Menu 2:
-In this menu, the chosen and palette and fractal is graphically visualized on the screen. 
+In this menu, the chosen palette and fractal are graphically visualized on the screen. 
 Moreover, the user is able to interact with the fractal by moving it along the x-, y- and z axis on the screen.
-Note: Before toggling a switch, make sure that the rest are off. 
+Note: Before toggling a switch, make sure that the rest of the switches are off. 
 -- SW0 is on: Moves the fractal up along the y-axis
 -- SW1 is on: Moves the fractal down along the y-axis
 -- SW2 is on: Moves the fractal left along the x-axis
@@ -55,5 +55,5 @@ Note that in any instance of the program, you will reset the board when you pres
 
 
 Authors:
-Eliza Kizowska
+Eliza Anna Kizowska
 Hadia Abdulova
