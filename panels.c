@@ -18,10 +18,9 @@ static int string_length(const char *s){
 }
 
 
-// An array of letteres
+// An array of letteres. NOTE: Each letter has 5 pixels horizontally and 7 vertically
 // Source: ChatGPT
 static const uint8_t letters[][5] = { 
-    {0x00,0x00,0x00,0x00,0x00}, // space
     {0x7C,0x12,0x11,0x12,0x7C}, // A
     {0x7F,0x49,0x49,0x49,0x36}, // B
     {0x3E,0x41,0x41,0x41,0x22}, // C
@@ -50,6 +49,7 @@ static const uint8_t letters[][5] = {
     {0x61,0x51,0x49,0x45,0x43}
 };
 
+// Make the whole screen black
 static void black_background(uint8_t *fb) {
     for (int i = 0; i < H; i++) {
         for (int j = 0; j < W; j++){
@@ -58,30 +58,41 @@ static void black_background(uint8_t *fb) {
     }
 }
 
+// Drawing the border of the rectangle
 static void draw_rect(uint8_t *fb, int x0, int y0, int w, int h) {
-    if (w <= 0 || h <= 0) return;
-    int x1 = x0 + w - 1;
-    int y1 = y0 + h - 1;                            
-    for (int x = x0; x <= x1; ++x) {
-        fb[y0 * W + x] = 255;
-        fb[y1 * W + x] = 255;
+    int x1 = x0 + w - 1; 
+    int y1 = y0 + h - 1;
+    for (int x = x0; x <= x1; x++) {
+        fb[y0 * W + x] = 255;  // Drawing along x-axis at top border
+        fb[y1 * W + x] = 255;  // Drawing along x-axis at bottom border
     }
-    for (int y = y0; y <= y1; ++y) {
-        fb[y * W + x0] = 255;
-        fb[y * W + x1] = 255;
+    for (int y = y0; y <= y1; y++) {
+        fb[y * W + x0] = 255;  // Drawing along y-axis at the left side
+        fb[y * W + x1] = 255;  // Drawing along y-axis at the right side
     }
 }
 
 static void draw_char(uint8_t *fb, char ch, int x, int y, int scale) {
-    const uint8_t *g = letters[(ch - 'A') + 1];
+    /* Characters have numbers in ASCII ('A' = 65, 'B' = 66, 'C' = 67 etc.)
+       Uppercase letters have continuously growing letters after each other.
+       If ch = 'G', then 'G' = 71, and 71 - 65 = 6, which is the position of
+       G in our letters array. */
+    const uint8_t *g = letters[ch - 65];
+
+    uint8_t bits = 0;
+    int px = 0;
+    int py = 0;
+
+    // Looping the 5 columns of a letter
     for (int cx = 0; cx < 5; ++cx) {
-        uint8_t bits = g[cx];
-        for (int by = 0; by < 7; ++by) {
-            if (bits & (1 << by)) {
-                int px = x + cx * scale;
-                int py = y + by * scale;
-                for (int sy = 0; sy < scale; ++sy){
-                    for (int sx = 0; sx < scale; ++sx){ 
+        px = x + cx * scale;
+        bits = g[cx];
+        // Looping the 7 rows of a column of a letter
+        for (int by = 0; by < 7; by++) {
+            if (bits & (1 << by)) { // Checking that the bit in a position is 1 and not 0
+                py = y + by * scale;
+                for (int sy = 0; sy < scale; sy++){
+                    for (int sx = 0; sx < scale; sx++){ 
                         fb[(py + sy) * W + (px + sx)] = 255;
                     }
                 }
@@ -90,47 +101,44 @@ static void draw_char(uint8_t *fb, char ch, int x, int y, int scale) {
     }
 }
 
-static void draw_string(uint8_t *fb, const char *s, int x, int y, int scale) {
+static void draw_string(uint8_t *fb, const char *ch, int x, int y, int size) {
     int new_x = x;
-    while (*s) {        // Loops all string character
-        if (*s == ' ') {        // Check if there is any space
-            new_x += (6 * scale);       // Moves new_x by pixels
-            s++;        // We get the next char
-        } else {
-            draw_char(fb, *s, new_x, y, scale);
-            new_x += (6 * scale);
-            s++;
+    while (*ch) {        // Loops all character in the string
+        if (*ch != ' ') {  // Checking that there is no space
+            draw_char(fb, *ch, new_x, y, size);
         }
+        ch++;        // We get the next char
+        new_x += (6 * size);       // New position of x. 6 because a letter uses 5 pixels horizontally (+ 1 needed for space)
     }
 }
 
 
 // draw the fractal-chooser panel
-void draw_fractal_panel_and_swap(int selected_right, int menu_state, uint32_t bb_addr, uint32_t fb_addr) {
-    uint8_t *bb = (uint8_t*)bb_addr;
-    const char *title;
-    const char *option1;
-    const char *option2;
+void draw_menu_panel(int selected_right, int menu_state, uint32_t bb_addr, uint32_t fb_addr) {
+    uint8_t *bb = (uint8_t*)bb_addr;    // Address to the backbuffer
+    const char *title;                  // Address to the title of the panel (CHOOSE ...)
+    const char *option1;                // Address to the first choice one can select
+    const char *option2;                // Address to the seconds choice one can select
+    int size = 2;                       // How big the strings are going to be
 
-    // black back background 
+    // black back background (clearing the screen)
     black_background(bb);
 
-    if (menu_state == 0){
+    if (menu_state == 0){  // If it's the first menu
         title = "CHOOSE PALETTE";
         option1 = "FIRE";
         option2 = "SEA";
     }
-    if (menu_state == 1){
+    if (menu_state == 1){  // If it's the second menu
         title = "CHOOSE FRACTAL";
         option1 = "MANDELBROT";
         option2 = "BURNINGSHIP";
     }
 
-    // title 
-    int tscale = 2;
-    int twidth = string_length(title) * ((5 * tscale) + tscale);
-    int tcenter = (W - twidth) / 2;
-    draw_string(bb, title, tcenter, 8+35, tscale);
+    // Making/drawing the title
+    int twidth = string_length(title) * (6 * size);  // 6 because a letter uses 5 pixels horizontally (+ 1 needed for space)
+    int tcenter = (W - twidth) / 2;                  // Find the the width position so that title will be in the center
+    draw_string(bb, title, tcenter, 8+35, size);
 
     // two boxes 
     int box_w = 140, box_h = 90, gap = 20;
@@ -151,15 +159,17 @@ void draw_fractal_panel_and_swap(int selected_right, int menu_state, uint32_t bb
         draw_rect(bb, left_box_x, top_y, box_w, box_h);
     }
 
-    int lscale = 2;
-    int option1_w = string_length(option1) * ((5 * lscale) + lscale);
-    int option2_w = string_length(option2) * ((5 * lscale) + lscale);
+    int option1_w = string_length(option1) * ((5 * size) + size);
+    int option2_w = string_length(option2) * ((5 * size) + size);
     int option1_x = left_box_x + (box_w - option1_w) / 2;
     int option2_x = right_box_x + (box_w - option2_w) / 2;
-    int Ly = top_y + (box_h / 2) - ((7 * lscale) / 2);
+    int Ly = top_y + (box_h / 2) - ((7 * size) / 2);
 
-    draw_string(bb, option1, option1_x, Ly, lscale);
-    draw_string(bb, option2, option2_x, Ly, lscale);
+    draw_string(bb, option1, option1_x, Ly, size);
+    draw_string(bb, option2, option2_x, Ly, size);
 
     buffer_swap(bb_addr);
+    uint32_t tmp = bb_addr; 
+    bb_addr = fb_addr; 
+    fb_addr = tmp;
 }
