@@ -20,7 +20,7 @@ extern void draw_menu_panel(int selected_right, int menu_state, uint32_t bb_addr
 #define VGA             ((volatile uint8_t *)0x08000000)  
 #define VGA_CTRL        ((volatile uint32_t *)0x04000100) 
 #define DMA_BUFFER      VGA_CTRL[0]
-#define DMA_BACKBUFFER  VGA_CTRL[1]
+#define TDMA_BACKBUFFER  VGA_CTRL[1]
 #define DMA_STATUS      VGA_CTRL[3]
 #define FB_ADDR         (0x08000000u)   // Base address of framebuffer region
 #define FB2_ADDR        (FB_ADDR + (W * H))   // Second framebuffer address. difference between two fbs is that one frambuffer is after another in memory
