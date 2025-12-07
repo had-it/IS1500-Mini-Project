@@ -72,40 +72,32 @@ static void draw_rect(uint8_t *fb, int x0, int y0, int w, int h) {
     }
 }
 
-static void draw_char(uint8_t *fb, char ch, int x, int y, int scale) {
-    /* Characters have numbers in ASCII ('A' = 65, 'B' = 66, 'C' = 67 etc.)
-       Uppercase letters have continuously growing letters after each other.
-       If ch = 'G', then 'G' = 71, and 71 - 65 = 6, which is the position of
-       G in our letters array. */
-    const uint8_t *g = letters[ch - 65];
-
-    uint8_t bits = 0;
-    int px = 0;
-    int py = 0;
-
-    // Looping the 5 columns of a letter
-    for (int cx = 0; cx < 5; ++cx) {
-        px = x + cx * scale;
-        bits = g[cx];
-        // Looping the 7 rows of a column of a letter
-        for (int by = 0; by < 7; by++) {
-            if (bits & (1 << by)) { // Checking that the bit in a position is 1 and not 0
-                py = y + by * scale;
-                for (int sy = 0; sy < scale; sy++){
-                    for (int sx = 0; sx < scale; sx++){ 
-                        fb[(py + sy) * W + (px + sx)] = 255;
-                    }
-                }
-            }
-        }
-    }
-}
-
-static void draw_string(uint8_t *fb, const char *ch, int x, int y, int size) {
+static void draw_characters(uint8_t *fb, const char *ch, int x, int y, int size) {
     int new_x = x;
     while (*ch) {        // Loops all character in the string
         if (*ch != ' ') {  // Checking that there is no space
-            draw_char(fb, *ch, new_x, y, size);
+            const uint8_t *g = letters[*ch - 65];  // same index calculation
+
+            uint8_t bits = 0;
+            int px = 0;
+            int py = 0;
+
+            // Loop the 5 columns of a letter
+            for (int cx = 0; cx < 5; ++cx) {
+                px = new_x + cx * size;      // x position for this column
+                bits = g[cx];
+                // Loop the 7 rows of a column of a letter
+                for (int by = 0; by < 7; by++) {
+                    if (bits & (1 << by)) { // If bit is set, draw scaled pixel block
+                        py = y + by * size;
+                        for (int sy = 0; sy < size; sy++){
+                            for (int sx = 0; sx < size; sx++){
+                                fb[(py + sy) * W + (px + sx)] = 255;
+                            }
+                        }
+                    }
+                }
+            }
         }
         ch++;        // We get the next char
         new_x += (6 * size);       // New position of x. 6 because a letter uses 5 pixels horizontally (+ 1 needed for space)
@@ -138,38 +130,35 @@ void draw_menu_panel(int selected_right, int menu_state, uint32_t bb_addr, uint3
     // Making/drawing the title
     int twidth = string_length(title) * (6 * size);  // 6 because a letter uses 5 pixels horizontally (+ 1 needed for space)
     int tcenter = (W - twidth) / 2;                  // Find the the width position so that title will be in the center
-    draw_string(bb, title, tcenter, 8+35, size);
+    draw_characters(bb, title, tcenter, 8+35, size); // Characters of title are drawn here
 
     // two boxes 
-    int box_w = 140, box_h = 90, gap = 20;
-    int total_w = box_w * 2 + gap;
-    int left_x = (W - total_w) / 2;
-    int top_y = 100;
-    int left_box_x = left_x;
-    int right_box_x = left_x + box_w + gap;
+    int box_w = 140;                        // Width of a box
+    int box_h = 90;                         // Height of a box
+    int total_w = box_w * 2 + 20;           // Width of the two boxes + space betweem them
+    int lbox_x = (W - total_w) / 2;         // The left side of left box
+    int rbox_x = lbox_x + box_w + 20;       // The left side of right box
+    int top_y = 100;                        // Space above boxes
 
     if (!selected_right) {
-        // left thicker outline
-        draw_rect(bb, left_box_x - 2, top_y - 2, box_w + 4, box_h + 4);
-        draw_rect(bb, left_box_x - 1, top_y - 1, box_w + 2, box_h + 2);
-        draw_rect(bb, right_box_x, top_y, box_w, box_h);
+        // left thicker border
+        draw_rect(bb, lbox_x - 2, top_y - 2, box_w + 4, box_h + 4);
+        draw_rect(bb, lbox_x - 1, top_y - 1, box_w + 2, box_h + 2);
+        draw_rect(bb, rbox_x, top_y, box_w, box_h);
     } else {
-        draw_rect(bb, right_box_x - 2, top_y - 2, box_w + 4, box_h + 4);
-        draw_rect(bb, right_box_x - 1, top_y - 1, box_w + 2, box_h + 2);
-        draw_rect(bb, left_box_x, top_y, box_w, box_h);
+        draw_rect(bb, rbox_x - 2, top_y - 2, box_w + 4, box_h + 4);
+        draw_rect(bb, rbox_x - 1, top_y - 1, box_w + 2, box_h + 2);
+        draw_rect(bb, lbox_x, top_y, box_w, box_h);
     }
 
     int option1_w = string_length(option1) * ((5 * size) + size);
     int option2_w = string_length(option2) * ((5 * size) + size);
-    int option1_x = left_box_x + (box_w - option1_w) / 2;
-    int option2_x = right_box_x + (box_w - option2_w) / 2;
+    int option1_x = lbox_x + (box_w - option1_w) / 2;
+    int option2_x = rbox_x + (box_w - option2_w) / 2;
     int Ly = top_y + (box_h / 2) - ((7 * size) / 2);
 
-    draw_string(bb, option1, option1_x, Ly, size);
-    draw_string(bb, option2, option2_x, Ly, size);
+    draw_characters(bb, option1, option1_x, Ly, size);
+    draw_characters(bb, option2, option2_x, Ly, size);
 
     buffer_swap(bb_addr);
-    uint32_t tmp = bb_addr; 
-    bb_addr = fb_addr; 
-    fb_addr = tmp;
 }
