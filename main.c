@@ -40,8 +40,6 @@ volatile int fractal_type = 0;
 static uint8_t palette[256];
 static uint8_t *current_palette; // pointer for choosed pallette, needs for draw_fractal
 static volatile int last_btn = 0; 
-
-// Initial center of the Fractals
 int32_t center_x = -32768;   // -0.5 * (1 << 16)
 int32_t center_y = 0;
 int32_t scale = 5 * (1 << 16);  // 5.0 in fixed point format (Q16.16)
@@ -97,7 +95,6 @@ static void draw_fractal_to_fb(int fractal_type, uint8_t palette[256], int32_t s
         }
     }
 
-     /* swap to the buffer we just wrote, and flip for next frame */
     buffer_swap(bb_addr);
     
     // Swap front and back buffer addresses
@@ -196,7 +193,6 @@ while (1) {
             }
             for (volatile int d = 0; d < 20000; ++d) ;
         } else if (menu_state == 1) {
-            /* keep chooser visible and update when SW0 toggles */
             static int last_sw0 = -1;
             int sw0 = (get_sw() & 1) ? 1 : 0;
             if (sw0 != last_sw0) {
