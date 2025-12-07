@@ -1,12 +1,11 @@
 /* Fractal Visualizer
 Date: 2025-12-xx
-Authors:
+Authors: 
 */
 
-#include "dtekv-lib.h"
 #include <stdint.h>
 
-// Functions from fractals.c
+// Functions from fractals.c 
 extern int mandelbrot(int32_t c_re, int32_t c_im, int max_iter);
 extern int burningship(int32_t c_re, int32_t c_im, int max_iter);
 extern void build_palette(uint8_t pal[256], int palette);
@@ -21,8 +20,8 @@ extern void draw_menu_panel(int selected_right, int menu_state, uint32_t bb_addr
 #define MAX_ITER 50   // keep same value used when building palette / testing
 
 // VGA
-#define VGA      ((volatile uint8_t *)0x08000000UL)
-#define VGA_CTRL ((volatile uint32_t *)0x04000100UL)
+#define VGA      ((volatile uint8_t *)0x08000000UL)   // UL stands for unsigned long (not strictly necessary)
+#define VGA_CTRL ((volatile uint32_t *)0x04000100UL) //-
 
 // VGA DMA
 #define DMA_SWAP        VGA_CTRL[0]
@@ -30,8 +29,8 @@ extern void draw_menu_panel(int selected_right, int menu_state, uint32_t bb_addr
 #define DMA_STATUS      VGA_CTRL[3]
 
 // Two framebuffers inside the VGA frame-memory region
-#define FB_ADDR      (0x08000000u)
-#define FB2_ADDR     (FB_ADDR + (W * H))
+#define FB_ADDR      (0x08000000u)   // Base address of framebuffer region
+#define FB2_ADDR     (FB_ADDR + (W * H))   // Second framebuffer address. difference between two fbs is that one frambuffer is after another in memory
 
 // SWITCH
 #define SWITCH   ((volatile uint32_t *)0x04000010UL)
@@ -45,8 +44,8 @@ extern void draw_menu_panel(int selected_right, int menu_state, uint32_t bb_addr
 volatile int menu_state = 0;
 volatile int fractal_type = 0;
 static uint8_t palette[256];
-static uint8_t *current_palette; // pointer for chosen palette
-static volatile int last_btn = 0;
+static uint8_t *current_palette; // pointer for choosed pallette, needs for draw_fractal
+static volatile int last_btn = 0; 
 
 // Initial center of the Fractals
 int32_t center_x = -32768;   // -0.5 * (1 << 16)
@@ -66,7 +65,7 @@ static int get_btn(void) {
     return (*BUTTON);
 }
 
-// Clearing the whole VGA buffer by setting all pixels to black (0)
+ // Clearing the whole VGA buffer by setting all pixels to black (0)
 static void clearScreen(void){
     volatile uint8_t *fb = VGA;
     for (int i = 0; i < W*H; ++i) {
@@ -74,8 +73,8 @@ static void clearScreen(void){
     }
 }
 
-void buffer_swap(uint32_t bb_addr_local) {
-    DMA_BACKBUFFER = bb_addr_local; // set backbuffer address
+void buffer_swap(uint32_t bb_addr) {
+    DMA_BACKBUFFER = bb_addr; // set backbuffer address
     DMA_SWAP = 0;  // This triggers the swap
 
     // wait for swap to complete
@@ -85,166 +84,50 @@ void buffer_swap(uint32_t bb_addr_local) {
 }
 
 /* Draw using functions from fractals.c */
-static void draw_fractal_to_fb_once(int fractal_type_local, uint8_t palette_local[256], int32_t scale_local, int32_t center_x_local, int32_t center_y_local) {
+static void draw_fractal_to_fb(int fractal_type, uint8_t palette[256], int32_t scale, int32_t center_x, int32_t center_y) {
     uint8_t *bb = (uint8_t *) bb_addr; // Pointer to the backbuffer
-    int32_t pixel_local = (int32_t)(((int64_t)scale_local) / W);
+    int32_t pixel = (int32_t)(((int64_t)scale) / W);
 
     int half_w = W / 2;
     int half_h = H / 2;
 
     // Choose fractal outside the loop for speedoptimization
     int (*fractal_func)(int32_t, int32_t, int);
-    if (fractal_type_local == 0){
+    if (fractal_type == 0){
         fractal_func = mandelbrot;
     } else {
         fractal_func = burningship;
     }
 
     for (int py = 0; py < H; ++py) {
-        int32_t cy = center_y_local + (int32_t)(((int64_t)(py - half_h) * pixel_local));
+        int32_t cy = center_y + (int32_t)(((int64_t)(py - half_h) * pixel));
         uint8_t *row = &bb[py * W];
-        int32_t cx = center_x_local + (int32_t)(((int64_t)(- half_w) * pixel_local));
+        int32_t cx = center_x + (int32_t)(((int64_t)(- half_w) * pixel));
         for (int px = 0; px < W; ++px) {
             int iter = fractal_func(cx, cy, MAX_ITER);
-            cx += pixel_local;
+            cx += pixel;
             uint8_t idx = iter_to_index(iter, MAX_ITER);
-            row[px] = palette_local[idx];
+            row[px] = palette[idx];
         }
     }
 
-    /* swap to the buffer we just wrote, and flip for next frame */
+     /* swap to the buffer we just wrote, and flip for next frame */
     buffer_swap(bb_addr);
-
+    
     // Swap front and back buffer addresses
-    uint32_t tmp = bb_addr;
-    bb_addr = fb_addr;
+    uint32_t tmp = bb_addr; 
+    bb_addr = fb_addr; 
     fb_addr = tmp;
 }
 
-/* ----------------- CSR reads for perf counters ----------------- */
-/* read 32-bit counters using CSR instructions */
-static inline uint32_t read_mcycle(void) {
-    uint32_t v;
-    asm volatile ("csrr %0, mcycle" : "=r"(v));
-    return v;
-}
-static inline uint32_t read_minstret(void) {
-    uint32_t v;
-    asm volatile ("csrr %0, minstret" : "=r"(v));
-    return v;
-}
-static inline uint32_t read_mhpm3(void)  { uint32_t v; asm volatile ("csrr %0, mhpmcounter3" : "=r"(v)); return v; }
-static inline uint32_t read_mhpm4(void)  { uint32_t v; asm volatile ("csrr %0, mhpmcounter4" : "=r"(v)); return v; }
-static inline uint32_t read_mhpm5(void)  { uint32_t v; asm volatile ("csrr %0, mhpmcounter5" : "=r"(v)); return v; }
-static inline uint32_t read_mhpm6(void)  { uint32_t v; asm volatile ("csrr %0, mhpmcounter6" : "=r"(v)); return v; }
-static inline uint32_t read_mhpm7(void)  { uint32_t v; asm volatile ("csrr %0, mhpmcounter7" : "=r"(v)); return v; }
-static inline uint32_t read_mhpm8(void)  { uint32_t v; asm volatile ("csrr %0, mhpmcounter8" : "=r"(v)); return v; }
-static inline uint32_t read_mhpm9(void)  { uint32_t v; asm volatile ("csrr %0, mhpmcounter9" : "=r"(v)); return v; }
 
-/* ----------------- small printing helpers ----------------- */
-/* We rely on the functions provided in dtekv-lib.h:
-   - print(const char *s)
-   - print_dec(unsigned v)
-   If your header provides slightly different names, adapt accordingly.
-*/
-
-/* Print an unsigned 32-bit value padded to 3 digits (used for fractional part) */
-static void print_padded3(uint32_t v) {
-    char buf[4];
-    buf[3] = '\0';
-    buf[2] = '0' + (v % 10); v /= 10;
-    buf[1] = '0' + (v % 10); v /= 10;
-    buf[0] = '0' + (v % 10);
-    print(buf);
-}
-
-/* Print CSV header (one-time) */
-static void print_csv_header(void) {
-    print("cycles,insts,mhpm3,mhpm4,mhpm5,mhpm6,mhpm7,mhpm8,mhpm9\n");
-}
-
-/* Measure N draws: read counters before and after each call, print deltas as CSV */
-static void measure_draws_n(int fractal_t, uint8_t pal[256], int32_t scl, int32_t cx, int32_t cy, int n) {
-    print("BEGIN_MEASURE\n");
-    print_csv_header();
-
-    for (int i = 0; i < n; ++i) {
-        // read before
-        uint32_t b_cycles = read_mcycle();
-        uint32_t b_insts  = read_minstret();
-        uint32_t b3 = read_mhpm3();
-        uint32_t b4 = read_mhpm4();
-        uint32_t b5 = read_mhpm5();
-        uint32_t b6 = read_mhpm6();
-        uint32_t b7 = read_mhpm7();
-        uint32_t b8 = read_mhpm8();
-        uint32_t b9 = read_mhpm9();
-
-        // perform the measured work (one full frame)
-        draw_fractal_to_fb_once(fractal_t, pal, scl, cx, cy);
-
-        // read after
-        uint32_t a_cycles = read_mcycle();
-        uint32_t a_insts  = read_minstret();
-        uint32_t a3 = read_mhpm3();
-        uint32_t a4 = read_mhpm4();
-        uint32_t a5 = read_mhpm5();
-        uint32_t a6 = read_mhpm6();
-        uint32_t a7 = read_mhpm7();
-        uint32_t a8 = read_mhpm8();
-        uint32_t a9 = read_mhpm9();
-
-        // compute deltas (unsigned wrap is okay for short runs)
-        uint32_t d_cycles = a_cycles - b_cycles;
-        uint32_t d_insts  = a_insts  - b_insts;
-        uint32_t d3 = a3 - b3;
-        uint32_t d4 = a4 - b4;
-        uint32_t d5 = a5 - b5;
-        uint32_t d6 = a6 - b6;
-        uint32_t d7 = a7 - b7;
-        uint32_t d8 = a8 - b8;
-        uint32_t d9 = a9 - b9;
-
-        // Print CSV row: cycles,insts,mhpm3..9
-        print_dec(d_cycles); print(","); print_dec(d_insts); print(",");
-        print_dec(d3); print(","); print_dec(d4); print(","); print_dec(d5); print(",");
-        print_dec(d6); print(","); print_dec(d7); print(","); print_dec(d8); print(",");
-        print_dec(d9); print("\n");
-
-        // Print a human-readable IPC line too (scaled to 3 decimal places)
-        // IPC = d_insts / d_cycles
-        if (d_cycles != 0) {
-            uint32_t ipc_x1000 = (uint32_t)(((uint64_t)d_insts * 1000ULL) / (uint64_t)d_cycles);
-            // print "IPC   : X.YYY\n"
-            print("IPC   : ");
-            // integer part (could be >=1)
-            uint32_t ip_int = ipc_x1000 / 1000;
-            uint32_t ip_frac = ipc_x1000 % 1000;
-            print_dec(ip_int);
-            print(".");
-            print_padded3(ip_frac);
-            print("\n");
-        } else {
-            print("IPC   : - (zero cycles)\n");
-        }
-    }
-
-    print("END_MEASURE\n");
-}
-
-/* Wrapper used earlier by code (keeps name draw_fractal_to_fb for compatibility)
-   It is kept for other call-sites but not used when measuring (we call draw_fractal_to_fb_once).
-*/
-static void draw_fractal_to_fb(int fractal_type_local, uint8_t palette_local[256], int32_t scale_local, int32_t center_x_local, int32_t center_y_local) {
-    draw_fractal_to_fb_once(fractal_type_local, palette_local, scale_local, center_x_local, center_y_local);
-}
 
 void handle_interrupt(unsigned cause) {
 
     *BUTTON_EDGE = 0; // Reset the edge button
     int btn = get_btn() & 1;
 
-    // Return if no rising edge detected
+    // Return if no rising edge detected 
     if (btn){
         last_btn = 1;
         return;
@@ -259,15 +142,15 @@ void handle_interrupt(unsigned cause) {
             build_palette(palette, 0); // Palette 1 - fire
             current_palette = palette;
             menu_state = 1;
-            return;
+            return; 
         }
         // Switch 1
         if (sw & (1u << 0)) {
             build_palette(palette, 1); // Palette 2 - sea
             current_palette = palette;
             menu_state = 1;
-            return;
-        }
+            return; 
+        } 
         return;
     }
     /* ------------- 2. FRACTAL MENU -------------*/
@@ -275,35 +158,33 @@ void handle_interrupt(unsigned cause) {
 
         if ((sw & (1u << 0)) == 0) {// If switch 0 is off
                 fractal_type = 0; // Mandelbrot
-                // Run 10 measured draws and print results (CSV + IPC)
-                measure_draws_n(fractal_type, current_palette, scale, center_x, center_y, 10);
+                draw_fractal_to_fb(fractal_type, current_palette, scale, center_x, center_y);
                 menu_state = 2;
-                return;
+                return; 
             }
             // Switch 1
         if (sw & (1u << 0))  { // If switch 0 is on
                 fractal_type = 1; // Burning Ship
-                // Run 10 measured draws and print results (CSV + IPC)
-                measure_draws_n(fractal_type, current_palette, scale, center_x, center_y, 10);
+                draw_fractal_to_fb(fractal_type, current_palette, scale, center_x, center_y);
                 menu_state = 2;
-                return;
+                return; 
             }
             return;
     }
     /* ------------- 3. NAVIGATION STATE -------------*/
     else if (menu_state == 2){
-        if (sw & (1u << 0)) {
-                    center_y += pixel;
-                } else if (sw & (1u << 1)) {
-                    center_y -= pixel;
-                } else if (sw & (1u << 2)) {
-                    center_x += pixel;
-                } else if (sw & (1u << 3)) {
-                    center_x -= pixel;
-                } else if (sw & (1u << 4)) {
-                    scale -= (pixel*10);
-                } else if (sw & (1u << 5)) {
-                    scale += (pixel*10);
+        if (sw & (1u << 0)) { // If switch 1 is on, we go up
+                    center_y += pixel; // Move the center up 
+                } else if (sw & (1u << 1)) { // If switch 2 is on, we go down
+                    center_y -= pixel; // Move the center down
+                } else if (sw & (1u << 2)) { // If switch 3 is on, we go right
+                    center_x += pixel; // Move the center right
+                } else if (sw & (1u << 3)) { // If switch 4 is on, we go left
+                    center_x -= pixel; // Move the center left
+                } else if (sw & (1u << 4)) { // If switch 5 is on, we zoom in
+                    scale -= (pixel*10); // Zoom in by reducing scale
+                } else if (sw & (1u << 5)) { // If switch 6 is on, we zoom out
+                    scale += (pixel*10); // Zoom out by increasing scale
                 }
                 draw_fractal_to_fb(fractal_type, current_palette, scale, center_x, center_y);
                 return;
@@ -323,8 +204,8 @@ int main(void) {
     labinit();
 
     pixel = (int32_t)(((int64_t)scale) / W);
-
-    while (1) {
+    
+while (1) {
         if (menu_state == 0) {
             static int last_sw0 = -1;
             int sw0 = (get_sw() & 1) ? 1 : 0;
