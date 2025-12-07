@@ -22,7 +22,7 @@ extern void draw_menu_panel(int selected_right, int menu_state, uint32_t bb_addr
 // VGA
 #define VGA      ((volatile uint8_t *)0x08000000)  
 #define VGA_CTRL ((volatile uint32_t *)0x04000100) 
-#define DMA_SWAP        VGA_CTRL[0]
+#define DMA_BUFFER        VGA_CTRL[0]
 #define DMA_BACKBUFFER  VGA_CTRL[1]
 #define DMA_STATUS      VGA_CTRL[3]
 #define FB_ADDR      (0x08000000u)   // Base address of framebuffer region
@@ -57,14 +57,18 @@ static int get_btn(void) {
     return (*BUTTON);
 }
 
-void buffer_swap(uint32_t bb_addr) {
+void buffer_swap(void) {
     DMA_BACKBUFFER = bb_addr; // set backbuffer address
-    DMA_SWAP = 0;  // This triggers the swap
+    DMA_BUFFER = 0;  // This triggers the swap
 
     // wait for swap to complete
     while (DMA_STATUS & 0x1) {
         continue;
     }
+    // Swap front and back buffer addresses
+    uint32_t tmp = bb_addr; 
+    bb_addr = fb_addr; 
+    fb_addr = tmp;
 }
 
 /* Draw using functions from fractals.c */
@@ -95,12 +99,7 @@ static void draw_fractal_to_fb(int fractal_type, uint8_t palette[256], int32_t s
         }
     }
 
-    buffer_swap(bb_addr);
-    
-    // Swap front and back buffer addresses
-    uint32_t tmp = bb_addr; 
-    bb_addr = fb_addr; 
-    fb_addr = tmp;
+    buffer_swap();
 }
 
 void handle_interrupt(unsigned cause) {
@@ -176,7 +175,7 @@ void labinit(void) {
   *BUTTON_EDGE = 0; //resets edgecapture to 0
   *BUTTON_INTERRUPT = 0x1; // 1 on bit0 enables interrupt
   asm volatile ("csrsi mstatus,3"); // mstatus = machine status control register. Enable interrupts
-  asm volatile ("csrsi mie,18"); // machine interrupt enable control register. Accept interrupts from Switches
+  asm volatile ("csrsi mie,18"); // machine interrupt enable control register. Accept interrupts from buttons
 }
 
 int main(void) {

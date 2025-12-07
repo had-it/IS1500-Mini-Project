@@ -5,7 +5,7 @@
 #define W 320
 #define H 240
 
-extern void buffer_swap(uint32_t bb_addr);
+extern void buffer_swap(void);
 
 // s is a pointer to the first char in a string, *s is the char at current position
 static int string_length(const char *s){
@@ -158,5 +158,5 @@ void draw_menu_panel(int selected_right, int menu_state, uint32_t bb_addr, uint3
     draw_characters(bb, option1, option1_x, Ly, size);
     draw_characters(bb, option2, option2_x, Ly, size);
 
-    buffer_swap(bb_addr);
+    buffer_swap();
 }
