@@ -1,6 +1,6 @@
 /* Fractal Visualizer
-Date: 2025-12-xx
-Authors: 
+Date: 2025-12-07
+Authors: Eliza Anna Kizowska & Hadia Abdulova
 */
 
 #include <stdint.h>
@@ -21,25 +21,23 @@ extern void draw_menu_panel(int selected_right, int menu_state, uint32_t bb_addr
 #define MAX_ITER 50   // keep same value used when building palette / testing
 
 // VGA
-#define VGA      ((volatile uint8_t *)0x08000000UL)   // UL stands for unsigned long (not strictly necessary)
-#define VGA_CTRL ((volatile uint32_t *)0x04000100UL) //-
+#define VGA      ((volatile uint8_t *)0x08000000)
+#define VGA_CTRL ((volatile unsigned int *)0x04000100) 
 
 // VGA DMA
 #define DMA_BUFFER      VGA_CTRL[0]
 #define DMA_BACKBUFFER  VGA_CTRL[1]
 #define DMA_STATUS      VGA_CTRL[3]
 
-// Two framebuffers inside the VGA frame-memory region
-#define FB_ADDR      (0x08000000u)   // Base address of framebuffer region
-#define FB2_ADDR     (FB_ADDR + (W * H))   // Second framebuffer address. difference between two fbs is that one frambuffer is after another in memory
+// Two framebuffers inside the VGA frame-memory region, current front ant back buffer addresses
+static unsigned int fb_addr = (unsigned int)(VGA + 0); // Base address of framebuffer region
+static unsigned int bb_addr = (unsigned int)(VGA + (W * H)); // Second framebuffer address. difference between two fbs is that one frambuffer is after another in memory
 
-// SWITCH
-#define SWITCH   ((volatile uint32_t *)0x04000010UL)
-
-// BUTTON
-#define BUTTON   ((volatile uint32_t *)0x040000D0UL)
-#define BUTTON_EDGE         ((volatile int*) 0x040000dc)
-#define BUTTON_INTERRUPT    ((volatile int*) 0x040000d8)
+// SWITCHES AND BUTTONS
+#define SWITCH   ((volatile unsigned int*)0x04000010)
+#define BUTTON   ((volatile unsigned int*)0x040000D0UL)
+#define BUTTON_EDGE         ((volatile unsigned int*) 0x040000dc)
+#define BUTTON_INTERRUPT    ((volatile unsigned int*) 0x040000d8)
 
 // GLOBAL VARIABLES
 volatile int menu_state = 0;
@@ -49,24 +47,20 @@ static uint8_t *current_palette; // pointer for choosed pallette, needs for draw
 static volatile int last_btn = 0; 
 
 // Initial center of the Fractals
-int32_t center_x = -32768;   // -0.5 * (1 << 16)
-int32_t center_y = 0;
-int32_t scale = 5 * (1 << 16);  // 5.0 in fixed point format (Q16.16)
-int32_t pixel;
-
-// current front and back buffer addresses
-static uint32_t bb_addr = FB2_ADDR;
-static uint32_t fb_addr = FB_ADDR;
+int center_x = -32768;   // -0.5 * (1 << 16)
+int center_y = 0;
+int scale = 5 * (1 << 16);  // 5.0 in fixed point format (Q16.16)
+int pixel;
 
 // Getting switch and button
-static int get_sw(void) {
+static int get_sw() {
     return (*SWITCH);
 }
-static int get_btn(void) {
+static int get_btn() {
     return (*BUTTON);
 }
 
-void buffer_swap(uint32_t bb_addr) {
+void buffer_swap(unsigned int bb_addr) {
     DMA_BACKBUFFER = bb_addr; // set backbuffer address
     DMA_BUFFER = 0;  // This triggers the swap
 
@@ -79,19 +73,17 @@ void buffer_swap(uint32_t bb_addr) {
     uint32_t tmp = bb_addr; 
     bb_addr = fb_addr; 
     fb_addr = tmp;
-
 }
 
 /* Draw using functions from fractals.c */
-static void draw_fractal_to_fb(int fractal_type, uint8_t palette[256], int32_t scale, int32_t center_x, int32_t center_y) {
+static void draw_fractal_to_fb(int fractal_type, uint8_t palette[256], int center_x, int center_y) {
     uint8_t *bb = (uint8_t *) bb_addr; // Pointer to the backbuffer
-    int32_t pixel = (int32_t)(((int64_t)scale) / W);
 
     int half_w = W / 2;
     int half_h = H / 2;
 
     // Choose fractal outside the loop for speedoptimization
-    int (*fractal_func)(int32_t, int32_t, int);
+    int (*fractal_func)(int32_t, int32_t, int); //
     if (fractal_type == 0){
         fractal_func = mandelbrot;
     } else {
@@ -110,29 +102,27 @@ static void draw_fractal_to_fb(int fractal_type, uint8_t palette[256], int32_t s
         }
     }
 
-     /* swap to the buffer we just wrote, and flip for next frame */
+     // swap to the buffer we just wrote, and flip for next frame
     buffer_swap(bb_addr);
-    
-
 }
 
 void handle_interrupt(unsigned cause) {
-
-    *BUTTON_EDGE = 0; // Reset the edge button
-
-    // Return if no rising edge detected 
-    if (get_btn() & 0x1){
-        last_btn = 1;
+    
+    // ✔️ Ignorera interrupt som kommer medan knappen fortfarande är nedtryckt
+    if (!(*BUTTON_EDGE) || (get_btn() & 1)) {
+        *BUTTON_EDGE = 0;
         return;
     }
-    last_btn = 0;
+
+    *BUTTON_EDGE = 0;
 
     /* ------------- 1. PALETTE MENU -------------*/
+
     if (menu_state == 0){
         if((get_sw() & 0x1) == 0) {
             build_palette(palette, 0); // Palette 1 - fire
         }
-        // Switch 1
+        // Switch 0
         if (get_sw() & 0x1) {
             build_palette(palette, 1); // Palette 2 - sea
         } 
@@ -145,14 +135,14 @@ void handle_interrupt(unsigned cause) {
 
         if ((get_sw() & 0x1) == 0) {// If switch 0 is off
                 fractal_type = 0; // Mandelbrot
-                draw_fractal_to_fb(fractal_type, current_palette, scale, center_x, center_y);
+                draw_fractal_to_fb(fractal_type, current_palette, center_x, center_y);
                 menu_state = 2;
                 return; 
             }
-            // Switch 1
+            // Switch 0
         if (get_sw() & 0x1)  { // If switch 0 is on
                 fractal_type = 1; // Burning Ship
-                draw_fractal_to_fb(fractal_type, current_palette, scale, center_x, center_y);
+                draw_fractal_to_fb(fractal_type, current_palette, center_x, center_y);
                 menu_state = 2;
                 return; 
             }
@@ -173,8 +163,9 @@ void handle_interrupt(unsigned cause) {
         } else if (get_sw() & 0x20) { // If switch 6 is on, we zoom out
             scale += (pixel*10); // Zoom out by increasing scale
         }
-        draw_fractal_to_fb(fractal_type, current_palette, scale, center_x, center_y);
-        return;
+
+
+        draw_fractal_to_fb(fractal_type, current_palette, center_x, center_y);
         }
 }
 
@@ -187,9 +178,10 @@ void labinit(void) {
 
 int main(void) {
     labinit();
-    pixel = (int32_t)(((int64_t)scale) / W);
+    pixel = scale / W;
     
 while (1) {
+    
     static int last_sw0 = -1;
     static int last_menu_state = -1;
 
