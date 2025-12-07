@@ -12,7 +12,7 @@ extern void build_palette(uint8_t pal[256], int palette);
 extern uint8_t iter_to_index(int iter, int max_iter);
 
 // Functions from panels.c
-extern void draw_fractal_panel_and_swap(int selected_right, int menu_state, uint32_t bb_addr, uint32_t fb_addr);
+extern void draw_menu_panel(int selected_right, int menu_state, uint32_t bb_addr, uint32_t fb_addr);
 
 // Dimensions of the screen size
 #define W 320
@@ -210,7 +210,7 @@ while (1) {
             static int last_sw0 = -1;
             int sw0 = (get_sw() & 1) ? 1 : 0;
             if (sw0 != last_sw0) {
-                draw_fractal_panel_and_swap(sw0, menu_state, bb_addr, fb_addr);
+                draw_menu_panel(sw0, menu_state, bb_addr, fb_addr);
                 last_sw0 = sw0;
             }
             for (volatile int d = 0; d < 20000; ++d) ;
@@ -219,7 +219,7 @@ while (1) {
             static int last_sw0 = -1;
             int sw0 = (get_sw() & 1) ? 1 : 0;
             if (sw0 != last_sw0) {
-                draw_fractal_panel_and_swap(sw0, menu_state, bb_addr, fb_addr);
+                draw_menu_panel(sw0, menu_state, bb_addr, fb_addr);
                 last_sw0 = sw0;
             }
             for (volatile int d = 0; d < 20000; ++d) ;
