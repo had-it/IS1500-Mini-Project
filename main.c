@@ -1,5 +1,12 @@
-/* Fractal Visualizer
-Date: 2025-12-07
+/* 
+   Fractal Visualizer
+
+   Authors:
+   Eliza Anna Kizowska
+   Hadia Abdulova
+
+   Date:
+   2025-12-07
 */
 
 #include <stdint.h>
