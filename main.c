@@ -1,6 +1,5 @@
 /* Fractal Visualizer
-Date: 2025-12-xx
-Authors: 
+Date: 2025-12-07
 */
 
 #include <stdint.h>
