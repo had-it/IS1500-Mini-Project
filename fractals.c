@@ -1,6 +1,4 @@
-// NOTE: Change float to fixed because float is slow on embedded systems
-
-#include <stdint.h> // for uint16_t, uint8_t, and float?
+#include <stdint.h> // for uint16_t, uint8_t
 
 #define MAX_ITER 50 // Maximum iterations for fractal calculations
 
@@ -10,7 +8,6 @@ static inline int32_t abs(int32_t f) {
         f = -f;
     }
     return f;
-    // we might need to handle special cases for -0.0 and NaN (according to Copilot)
 }
 
 // Mandelbrot set equation iteration
@@ -56,22 +53,24 @@ int burningship(int32_t c_re, int32_t c_im, int max_iter) {
     return i;
 }
 
-uint8_t rgb332(uint8_t r, uint8_t g, uint8_t b) {
-    return ((r & 0xE0))       |   // 3 MSB av r
-           ((g & 0xE0) >> 3) |   // 3 MSB av g
-           ((b & 0xC0) >> 6);    // 2 MSB av b
+// VGA - 8bit RGB color
+uint8_t to_rgb332(uint8_t r, uint8_t g, uint8_t b) {
+    uint8_t r3 = r & 0xE0; // 3 msb 
+    uint8_t g3 = g & 0xE0; 
+    uint8_t b2 = (b & 0xC0) >> 6; 
+    return r3|g3|b2; // returning 8bit 
 }
 
 
-// One simple palette (blue -> cyan -> white)
+// Builds palettes
 void build_palette(uint8_t pal[256], int palette) {
     
     for (int i = 0; i < 256; i++) {
         if (palette == 0) {
-            pal[i] = rgb332(i, i/4, 0); // Fire
+            pal[i] = to_rgb332(i, i/4, 0); // Fire
         }
         else if (palette == 1){
-            pal[i] = rgb332(i/2, i/4, i); // Sea
+            pal[i] = to_rgb332(i/2, i/4, i); // Sea
         }
     }
 }

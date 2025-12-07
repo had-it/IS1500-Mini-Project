@@ -5,28 +5,26 @@ Authors:
 
 #include <stdint.h>
 
-// Functions from fractals.c 
+// Functions from fractals.c and panels.c
 extern int mandelbrot(int32_t c_re, int32_t c_im, int max_iter);
 extern int burningship(int32_t c_re, int32_t c_im, int max_iter);
 extern void build_palette(uint8_t pal[256], int palette);
 extern uint8_t iter_to_index(int iter, int max_iter);
-
-// Functions from panels.c
 extern void draw_menu_panel(int selected_right, int menu_state, uint32_t bb_addr, uint32_t fb_addr);
 
 // Dimensions of the screen size
 #define W 320
 #define H 240
-#define MAX_ITER 50   // keep same value used when building palette / testing
+#define MAX_ITER 50
 
 // VGA
-#define VGA      ((volatile uint8_t *)0x08000000)  
-#define VGA_CTRL ((volatile uint32_t *)0x04000100) 
-#define DMA_BUFFER        VGA_CTRL[0]
+#define VGA             ((volatile uint8_t *)0x08000000)  
+#define VGA_CTRL        ((volatile uint32_t *)0x04000100) 
+#define DMA_BUFFER      VGA_CTRL[0]
 #define DMA_BACKBUFFER  VGA_CTRL[1]
 #define DMA_STATUS      VGA_CTRL[3]
-#define FB_ADDR      (0x08000000u)   // Base address of framebuffer region
-#define FB2_ADDR     (FB_ADDR + (W * H))   // Second framebuffer address. difference between two fbs is that one frambuffer is after another in memory
+#define FB_ADDR         (0x08000000u)   // Base address of framebuffer region
+#define FB2_ADDR        (FB_ADDR + (W * H))   // Second framebuffer address. difference between two fbs is that one frambuffer is after another in memory
 
 // BUTTON AND SWITCHES
 #define SWITCH   ((volatile uint32_t *)0x04000010)
@@ -39,13 +37,12 @@ volatile int menu_state = 0;
 volatile int fractal_type = 0;
 static uint8_t palette[256];
 static uint8_t *current_palette; // pointer for choosed pallette, needs for draw_fractal
-static volatile int last_btn = 0; 
 int32_t center_x = -32768;   // -0.5 * (1 << 16)
 int32_t center_y = 0;
 int32_t scale = 5 * (1 << 16);  // 5.0 in fixed point format (Q16.16)
 int32_t pixel;
 
-// current front and back buffer addresses
+// Current front and back buffer addresses
 static uint32_t bb_addr = FB2_ADDR;
 static uint32_t fb_addr = FB_ADDR;
 
@@ -57,15 +54,16 @@ static int get_btn(void) {
     return (*BUTTON);
 }
 
+// Swaps frame- and backbuffers
 void buffer_swap(void) {
     DMA_BACKBUFFER = bb_addr; // set backbuffer address
-    DMA_BUFFER = 0;  // This triggers the swap
-
+    DMA_BUFFER = 0;  // trigger the swap 
+    
     // wait for swap to complete
-    while (DMA_STATUS & 0x1) {
+    while (DMA_STATUS & 0x1) {    
         continue;
     }
-    // Swap front and back buffer addresses
+    // swap front and back buffer addresses
     uint32_t tmp = bb_addr; 
     bb_addr = fb_addr; 
     fb_addr = tmp;
@@ -73,13 +71,12 @@ void buffer_swap(void) {
 
 // Draw fractals
 static void draw_fractal_to_fb(int fractal_type, uint8_t palette[256], int32_t scale, int32_t center_x, int32_t center_y) {
-    uint8_t *bb = (uint8_t *) bb_addr; // Pointer to the backbuffer
+    uint8_t *bb = (uint8_t *) bb_addr; // pointer to backbuffer
     int32_t pixel = scale / W;
 
     int half_w = W / 2;
     int half_h = H / 2;
 
-    // Choose fractal outside the loop for speedoptimization
     int (*fractal_func)(int32_t, int32_t, int);
     if (fractal_type == 0){
         fractal_func = mandelbrot;
@@ -87,6 +84,7 @@ static void draw_fractal_to_fb(int fractal_type, uint8_t palette[256], int32_t s
         fractal_func = burningship;
     }
 
+    // draw fractal with palette to pixel
     for (int py = 0; py < H; ++py) {
         int32_t cy = center_y + (int32_t)(((int64_t)(py - half_h) * pixel));
         uint8_t *row = &bb[py * W];
@@ -102,19 +100,19 @@ static void draw_fractal_to_fb(int fractal_type, uint8_t palette[256], int32_t s
     buffer_swap();
 }
 
+// Handles interrupt from button in all the panel states
 void handle_interrupt(unsigned cause) {
-
-    *BUTTON_EDGE = 0; // Reset the edge button
+    *BUTTON_EDGE = 0; // reset the edge button
     int btn = get_btn() & 1;
 
-    // Return if no rising edge detected 
+    // return if no rising edge detected 
     if (btn){
         return;
     }
 
     /* ------------- 1. PALETTE MENU -------------*/
     if (menu_state == 0){
-        int sw0 = get_sw() & 0x1;
+        int sw0 = get_sw() & 0x1; // 0 = fire, 1 = sea
 
         build_palette(palette, sw0);
         current_palette = palette;
@@ -138,7 +136,7 @@ void handle_interrupt(unsigned cause) {
     }
     /* ------------- 2. FRACTAL MENU -------------*/
     else if (menu_state == 1){
-        int sw0 = get_sw() & 0x1;
+        int sw0 = get_sw() & 0x1; // 0 = mandelbrot, 1 = burningship
         draw_fractal_to_fb(sw0, current_palette, scale, center_x, center_y);
         menu_state = 2;
         return;
