@@ -71,7 +71,7 @@ void buffer_swap(void) {
     fb_addr = tmp;
 }
 
-/* Draw using functions from fractals.c */
+// Draw fractals
 static void draw_fractal_to_fb(int fractal_type, uint8_t palette[256], int32_t scale, int32_t center_x, int32_t center_y) {
     uint8_t *bb = (uint8_t *) bb_addr; // Pointer to the backbuffer
     int32_t pixel = (int32_t)(((int64_t)scale) / W);
@@ -109,11 +109,9 @@ void handle_interrupt(unsigned cause) {
 
     // Return if no rising edge detected 
     if (btn){
-        last_btn = 1;
         return;
     }
 
-    last_btn = 0;
     int sw = get_sw();
 
     /* ------------- 1. PALETTE MENU -------------*/
@@ -182,7 +180,7 @@ int main(void) {
     labinit();
     pixel = (int32_t)(((int64_t)scale) / W);
 
-while (1) {
+while (1) {    
         if (menu_state == 0) {
             static int last_sw0 = -1;
             int sw0 = (get_sw() & 1) ? 1 : 0;
