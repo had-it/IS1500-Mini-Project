@@ -76,6 +76,7 @@ static void draw_fractal_to_fb(int fractal_type, uint8_t palette[256], int32_t s
     int half_w = W / 2;
     int half_h = H / 2;
 
+    // Create a pointer function for fractals
     int (*fractal_func)(int32_t, int32_t, int);
     if (fractal_type == 0){
         fractal_func = mandelbrot;
@@ -84,11 +85,11 @@ static void draw_fractal_to_fb(int fractal_type, uint8_t palette[256], int32_t s
     }
 
     // draw fractal with palette to pixel
-    for (int py = 0; py < H; ++py) {
+    for (int py = 0; py < H; ++py) {  // loop pixels in y direction
         int32_t cy = center_y + (int32_t)(((int64_t)(py - half_h) * pixel));
         uint8_t *row = &bb[py * W];
         int32_t cx = center_x + (int32_t)(((int64_t)(- half_w) * pixel));
-        for (int px = 0; px < W; ++px) {
+        for (int px = 0; px < W; ++px) {  // loop pixels in x direction
             int iter = fractal_func(cx, cy, MAX_ITER);
             cx += pixel;
             uint8_t idx = iter_to_index(iter, MAX_ITER);
@@ -96,7 +97,7 @@ static void draw_fractal_to_fb(int fractal_type, uint8_t palette[256], int32_t s
         }
     }
 
-    buffer_swap();
+    buffer_swap(); // swapping framebuffer and backbuffer
 }
 
 // Handles interrupt from button in all the panel states
@@ -117,21 +118,6 @@ void handle_interrupt(unsigned cause) {
         current_palette = palette;
         menu_state = 1;
         return;
-
-
-        /*if(!(get_sw() & 0x1)) { // if switch 0 is 0
-            build_palette(palette, 0); // Palette 1 - fire
-            current_palette = palette;
-            menu_state = 1;
-            return; 
-        }
-        if (get_sw() & 0x1) { // if switch 0 is 1
-            build_palette(palette, 1); // Palette 2 - sea
-            current_palette = palette;
-            menu_state = 1;
-            return; 
-        } 
-        return;*/
     }
     /* ------------- 2. FRACTAL MENU -------------*/
     else if (menu_state == 1){
@@ -139,22 +125,6 @@ void handle_interrupt(unsigned cause) {
         draw_fractal_to_fb(sw0, current_palette, scale, center_x, center_y);
         menu_state = 2;
         return;
-
-
-        /*f (!(get_sw() & 0x1)) {// If switch 0 is off
-                fractal_type = 0; // Mandelbrot
-                draw_fractal_to_fb(fractal_type, current_palette, scale, center_x, center_y);
-                menu_state = 2;
-                return; 
-            }
-            // Switch 1
-        if (get_sw() & 0x1)  { // If switch 0 is on
-                fractal_type = 1; // Burning Ship
-                draw_fractal_to_fb(fractal_type, current_palette, scale, center_x, center_y);
-                menu_state = 2;
-                return; 
-            }
-            return;*/
     }
     /* ------------- 3. NAVIGATION STATE -------------*/
     else if (menu_state == 2){
@@ -187,19 +157,21 @@ int main(void) {
     labinit();
     pixel = scale / W;
 
-while (1) {
-    static int last_sw0 = -1;
-    static int last_menu_state = -1;
-    int sw0 = get_sw() & 1;
-    
-    if (menu_state == 0 || menu_state == 1) {
-        if (sw0 != last_sw0 || menu_state != last_menu_state) {
-            draw_menu_panel(sw0, menu_state, bb_addr, fb_addr);
-            last_sw0 = sw0;
-            last_menu_state = menu_state;
-        }} else {
-            asm volatile ("wfi"); // "wait for interrupt". Energysaving-mode for CPU
+    // Where the main part of the code happens
+    // We check buttons, switches and menu states in order to interchange between panels
+    while (1) {
+        static int last_sw0 = -1;
+        static int last_menu_state = -1;
+        int sw0 = get_sw() & 1;
+        
+        if (menu_state == 0 || menu_state == 1) {
+            if (sw0 != last_sw0 || menu_state != last_menu_state) {
+                draw_menu_panel(sw0, menu_state, bb_addr, fb_addr);
+                last_sw0 = sw0;
+                last_menu_state = menu_state;
+            }} else {
+                asm volatile ("wfi"); // "wait for interrupt"
+            }
         }
-    }
     return 0; // Does not reach here
 }
