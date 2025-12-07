@@ -4,7 +4,7 @@ Authors:
 */
 
 #include <stdint.h>
-rect
+
 // Functions from fractals.c 
 extern int mandelbrot(int32_t c_re, int32_t c_im, int max_iter);
 extern int burningship(int32_t c_re, int32_t c_im, int max_iter);
