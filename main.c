@@ -184,20 +184,27 @@ int main(void) {
 
     // Where the main part of the code happens
     // We check buttons, switches and menu states in order to interchange between panels
-    while (1) {
-        static int last_sw0 = -1;
-        static int last_menu_state = -1;
-        int sw0 = get_sw() & 1;
-        
-        if (menu_state == 0 || menu_state == 1) {
-            if (sw0 != last_sw0 || menu_state != last_menu_state) {
+while (1) {
+        if (menu_state == 0) {
+            static int last_sw0 = -1;
+            int sw0 = (get_sw() & 1);
+            if (sw0 != last_sw0) {
                 draw_menu_panel(sw0, menu_state, bb_addr, fb_addr);
                 last_sw0 = sw0;
-                last_menu_state = menu_state;
-            }} else {
-                asm volatile ("wfi"); // "wait for interrupt"
             }
+            for (volatile int d = 0; d < 20000; ++d);
+        } else if (menu_state == 1) {
+            static int last_sw0 = -1;
+            int sw0 = (get_sw() & 1);
+            if (sw0 != last_sw0) {
+                draw_menu_panel(sw0, menu_state, bb_addr, fb_addr);
+                last_sw0 = sw0;
+            }
+            for (volatile int d = 0; d < 20000; ++d);
+        } else {
+            asm volatile ("wfi");
         }
+    }
     return 0; // Does not reach here
 }
 /* Contributions: Both worked on basic functions( e.g. button, switches, VGA).
