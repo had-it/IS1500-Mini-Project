@@ -116,22 +116,40 @@ void handle_interrupt(unsigned cause) {
     if (btn){
         return;
     }
-
-    /* ------------- 1. PALETTE MENU -------------*/
+    int sw0 = get_sw();
+/* ------------- 1. PALETTE MENU -------------*/
     if (menu_state == 0){
-        int sw0 = get_sw() & 0x1; // 0 = fire, 1 = sea
-
-        build_palette(palette, sw0);
-        current_palette = palette;
-        menu_state = 1;
+        if(!(sw0 & 0x1)) { // if switch 0 is 0
+            build_palette(palette, 0); // Palette 1 - fire
+            current_palette = palette;
+            menu_state = 1;
+            return; 
+        }
+        if (sw0 & 0x1) { // if switch 0 is 1
+            build_palette(palette, 1); // Palette 2 - sea
+            current_palette = palette;
+            menu_state = 1;
+            return; 
+        } 
         return;
     }
+
     /* ------------- 2. FRACTAL MENU -------------*/
     else if (menu_state == 1){
-        int sw0 = get_sw() & 0x1; // 0 = mandelbrot, 1 = burningship
-        draw_fractal_to_fb(sw0, current_palette, scale, center_x, center_y);
-        menu_state = 2;
-        return;
+        if (!(sw0 & 0x1)) {// If switch 0 is off
+                fractal_type = 0; // Mandelbrot
+                draw_fractal_to_fb(fractal_type, current_palette, scale, center_x, center_y);
+                menu_state = 2;
+                return; 
+            }
+            // Switch 1
+        if (sw0 & 0x1)  { // If switch 0 is on
+                fractal_type = 1; // Burning Ship
+                draw_fractal_to_fb(fractal_type, current_palette, scale, center_x, center_y);
+                menu_state = 2;
+                return; 
+            }
+            return;
     }
     /* ------------- 3. NAVIGATION STATE -------------*/
     else if (menu_state == 2){
