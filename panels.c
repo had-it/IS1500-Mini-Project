@@ -179,3 +179,4 @@ void draw_menu_panel(int selected_right, int menu_state, uint32_t bb_addr, uint3
     // Swaps backbuffer with framebuffer
     buffer_swap();
 }
+/* Contributions: Both had their focus on menupanels*/

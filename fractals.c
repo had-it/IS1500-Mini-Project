@@ -99,3 +99,6 @@ uint8_t iter_to_index(int iter, int max_iter) {
     }
     return (uint8_t)idx;
 }
+
+/* Contributions: Eliza focused mostly on burningship formula and building 
+palettes while Hadia on mandelbrot and building fractals */

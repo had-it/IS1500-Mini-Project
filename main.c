@@ -182,3 +182,5 @@ int main(void) {
         }
     return 0; // Does not reach here
 }
+/* Contributions: Both worked on basic functions( e.g. button, switches, VGA).
+Eliza focused mostly on interrupts and Hadia on backbuffer */
